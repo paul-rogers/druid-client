@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .service import Service, trace_enabled
+from .service import Service
 from .error import ClientError
 from .sql import SqlRequest, SqlResponse, QueryPlan
 from .util import is_blank, dict_get
@@ -33,11 +33,24 @@ class Client(Service):
     def __init__(self, cluster_config, endpoint):
         Service.__init__(self, cluster_config, endpoint)
         self._query_client = None
+        self._extn_cache = {}
     
     def service(self):
         return 'client'
    
     #-------- Query --------
+
+    def _prepare_query(self, request):
+        if request is None:
+            raise ClientError("No query provided.")
+        if type(request) == str:
+            request = self.sql_request(request)
+        if is_blank(request.sql):
+            raise ClientError("No query provided.")
+        if self.cluster_config.trace:
+            print(request.sql)
+        query_obj = request.to_request()
+        return (request, query_obj)
 
     def sql_query(self, request) -> SqlResponse:
         '''
@@ -45,20 +58,8 @@ class Client(Service):
         options. Returns a response with either a detailed error message, or
         the rows and query ID.
         '''
-        if request is None:
-            raise ClientError("No query provided.")
-        if type(request) == str:
-            request = SqlRequest(request)
-        if is_blank(request.sql):
-            raise ClientError("No query provided.")
-        if trace_enabled():
-            print(request.sql)
-        query_obj = request.to_request()
-        url = self.build_url(REQ_ROUTER_SQL)
-        if trace_enabled():
-            print("url:", url)
-            print("body:", query_obj)
-        r = self.session.post(url, json=query_obj, headers=request.headers)
+        request, query_obj = self._prepare_query(request)
+        r = self.post_only_json(REQ_ROUTER_SQL, query_obj, headers=request.headers)
         return SqlResponse(request, r)
 
     def sql(self, sql, *args):
@@ -84,6 +85,9 @@ class Client(Service):
             raise ClientError("No query provided.")
         results = self.sql('EXPLAIN PLAN FOR ' + query)
         return QueryPlan(results[0])
+    
+    def sql_request(self, sql):
+        return SqlRequest(self, sql)
    
     #-------- Cluster Services --------
 
@@ -117,3 +121,25 @@ class Client(Service):
             self._query_client = pydruid_client.PyDruid(coord.node.config.url_prefix(), 'druid/v2')
             self._query_client.cafile = self.config.tls_cert
         return self._query_client
+   
+    #-------- Extensions --------
+    #
+    # In addition to this method, a method named <extn>_extn is defined
+    # for each extension that provides client services.
+
+    def extn(self, name):
+        extn = self._extn_cache.get(name, None)
+        if extn is not None:
+            return extn
+        extn = self.cluster_config.client_for(self, name)
+        if extn is None:
+            return None
+        self._extn_cache[name] = extn
+        return extn
+    
+    def extn_names(self):
+        return self.cluster_config.extension_names()
+    
+    def extns(self):
+        return self.cluster_config.extension_list()
+

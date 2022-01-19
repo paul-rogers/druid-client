@@ -14,6 +14,7 @@
 
 from .util import dict_get, split_host_url, service_url
 from . import consts
+from .extensions import load_extensions
 
 class ServiceMapper:
     """
@@ -99,6 +100,11 @@ class ClusterConfig:
         self.service_mapper = dict_get(config, 'mapper', ServiceMapper())
         self.tls_cert = dict_get(config, 'tls_cert')
         self.prefer_tls = dict_get(config, 'prefer_tls', False)
+        self.extensions = load_extensions()
+
+        # Enable this option to see the URLs as they are sent.
+        # Handy for debugging.
+        self.trace = False
 
     def map_endpoint(self, remote_url):
         """
@@ -109,3 +115,16 @@ class ClusterConfig:
         tls_port = port if scheme == consts.TLS_PROTOCOL else None
         scheme, host, port = self.service_mapper.url_for(host, http_port, tls_port, False)
         return service_url(scheme, host, port)
+
+    def client_for(self, client, extn):
+        defn = self.extensions.get(extn, None)
+        if defn is None or defn.extn_points.client is None:
+            return None
+        return defn.extn_points.client(client)
+
+    def extension_names(self):
+        return [defn.key for defn in self.extensions.values()]
+
+    def extension_list(self):
+        return [[defn.key, defn.name, defn.extn_points.summary]
+                for defn in self.extensions.values()]

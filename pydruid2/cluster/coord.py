@@ -59,6 +59,9 @@ REQ_SEGMENTS = REQ_DS_PROPERTIES + '/segments'
 REQ_SEGMENT_DETAILS = REQ_MD_SEGMENTS + '/{}'
 REQ_DS_TIERS = REQ_DS_PROPERTIES + '/tiers'
 
+# Cluster membership
+REQ_CLUSTER = COORD_BASE + "/cluster"
+
 # Lookups
 LOOKUP_BASE = COORD_BASE + '/lookups/config'
 REQ_LU_CONFIG = LOOKUP_BASE
@@ -786,3 +789,17 @@ class Coordinator(Service):
         """
         return self.post_json(REQ_LU_TIER_CONFIG, defn, args=[tier])
     
+    #-------- Cluster membership --------
+
+    def cluster_nodes(self, full=True):
+        """
+        Returns a list of services known to the cluster.
+
+        Reference
+        ---------
+        `GET /druid/coordinator/v1/cluster?full`
+
+        Currently undocumented.
+        """
+        return self.get_json(REQ_CLUSTER, params={"full": ""})
+

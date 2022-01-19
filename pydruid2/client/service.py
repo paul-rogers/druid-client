@@ -12,15 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from optparse import Option
 import requests
 from .util import is_blank, dict_get
-
-# Enable this option to see the URLs as they are sent.
-# Handy for debugging.
-trace = False
-
-def trace_enabled():
-    return trace
 
 def check_error(response):
     """
@@ -123,7 +117,7 @@ class Service:
         The `requests` `Request` object.
         '''
         url = self.build_url(req, args)
-        if trace:
+        if self.cluster_config.trace:
             print("url:", url)
         r = self.session.get(url, params=params)
         if require_ok:
@@ -144,7 +138,7 @@ class Service:
         parameters.
         """
         url = self.build_url(req, args)
-        if trace:
+        if self.cluster_config.trace:
             print("url:", url)
             print("body:", body)
         r = self.session.post(url, data=body, headers=headers)
@@ -158,13 +152,21 @@ class Service:
         node, with the given payload and optional URL query 
         parameters. The payload is serialized to JSON.
         """
+        return self.post_only_json(req, body, args, headers).json()
+
+    def post_only_json(self, req, body, args=None, headers=None) -> requests.Request:
+        """
+        Issues a POST request for the given URL on this
+        node, with the given payload and optional URL query 
+        parameters. The payload is serialized to JSON.
+        """
         url = self.build_url(req, args)
-        if trace:
+        if self.cluster_config.trace:
             print("url:", url)
             print("body:", body)
         r = self.session.post(url, json=body, headers=headers)
         check_error(r)
-        return r.json()
+        return r
 
     #-------- Common --------
 
@@ -221,3 +223,6 @@ class Service:
         """
         result = self.get_json(REQ_IN_CLUSTER)
         return dict_get(result, 'selfDiscovered', False)
+
+    def enable_trace(self, option=True):
+        self.cluster_config.trace = option

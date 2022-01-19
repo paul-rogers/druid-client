@@ -47,7 +47,6 @@ for details of the API. The API detail docstrings are courtesy of this page.
 
 from .client.config import ClusterConfig
 from .client.client import Client
-from .client import service
 
 def connect(url, **kwargs):
     """
@@ -70,11 +69,3 @@ def connect(url, **kwargs):
         connections within your own cluser or data center.
     """
     return Client(ClusterConfig(kwargs), url)
-
-def set_trace(option=True):
-    """
-    Enable or disable URL tracing.
-
-    When enabled, pydruid2 prints the URL before each call to aid debugging.
-    """
-    service.trace = option

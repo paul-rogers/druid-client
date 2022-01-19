@@ -17,15 +17,49 @@ import json
 from . import consts
 from .util import filter_null_cols
 
+class ColumnSchema:
+
+    def __init__(self, name, sql_type, druid_type):
+        self.name = name
+        self.sql_type = sql_type
+        self.druid_type = druid_type
+
+    def __str__(self):
+        return "\{name={}, SQL type={}, Druid type={}}".format(self.name, self.sql_type, self.druid_type)
+
 class SqlRequest:
 
-    def __init__(self, sql, context=None, params=None, format=None):
+    def __init__(self, client, sql):
+        self.client = client
         self.sql = sql
-        self.context = context
-        self.params = params
+        self.context = None
+        self.params = None
         self.header = False
-        self.result_format = format
+        self.result_format = None
         self.headers = None
+        self.types = None
+        self.sqlTypes = None
+    
+    def with_format(self, format):
+        self.format = format
+        return self
+    
+    def with_headers(self, sqlTypes=False, druidTypes=False):
+        self.headers = True
+        self.types = druidTypes
+        self.sqlTypes = sqlTypes
+        return self
+    
+    def with_context(self, context):
+        if self.context is None:
+            self.context = context
+        else:
+            self.context.update(context)
+        return self
+
+    def with_format(self, format):
+        self.format = format
+        return self
 
     def response_header(self):
         self.header = True
@@ -43,7 +77,14 @@ class SqlRequest:
             query_obj['header'] = True
         if self.result_format is not None:
             query_obj['resultFormat'] = self.result_format
-        return query_obj 
+        if self.sqlTypes:
+            query_obj['sqlTypesHeader'] = self.sqlTypes
+        if self.types:
+            query_obj['typesHeader'] = self.types
+        return query_obj
+
+    def run(self):
+        return self.client.sql(self)
 
 class SqlResponse:
 
