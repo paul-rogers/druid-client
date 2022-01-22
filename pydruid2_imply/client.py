@@ -13,7 +13,10 @@
 # limitations under the License.
 
 from pydruid2.client.client import REQ_ROUTER_SQL
+from pydruid2.client.error import ClientError
+from .talaria_query import TalariaQueryHandle
 from .sql import ImplySqlRequest, AsyncResponse, is_talaria
+from . import consts
 
 REQ_ROUTER_ASYNC_SQL = REQ_ROUTER_SQL + "/async"
 ASYNC_QUERY_BASE = REQ_ROUTER_ASYNC_SQL + '/{}'
@@ -59,3 +62,12 @@ class ImplyClient:
 
     def async_results(self, id):
         return self.client.get_json(REQ_ROUTER_ASYNC_RESULTS, args=[id])
+
+    def native_talaria(self, request):
+        if request is None:
+            raise ClientError("No query provided.")
+        if type(request) == str:
+            request = self.client.sql_request(request)
+        request.with_context({consts.TALARIA_KEY: consts.TALARIA_SERVER})
+        resp = self.client.sql_query(request)
+        return TalariaQueryHandle(request, resp.http_response)

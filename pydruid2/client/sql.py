@@ -25,7 +25,7 @@ class ColumnSchema:
         self.druid_type = druid_type
 
     def __str__(self):
-        return "\{name={}, SQL type={}, Druid type={}}".format(self.name, self.sql_type, self.druid_type)
+        return "{{name={}, SQL type={}, Druid type={}}}".format(self.name, self.sql_type, self.druid_type)
 
 class SqlRequest:
 
@@ -83,8 +83,74 @@ class SqlRequest:
             query_obj['typesHeader'] = self.types
         return query_obj
 
+    def format(self):
+        if self.result_format is None:
+            return consts.SQL_OBJECT
+        return self.result_format.lower()
+
     def run(self):
-        return self.client.sql(self)
+        return self.client.sql_query(self)
+
+def parse_object_schema(results):
+    schema = []
+    if len(results) == 0:
+        return schema
+    row = results[0]
+    for k, v in row.items():
+        druid_type = None
+        sql_type = None
+        if type(v) is str:
+            druid_type = consts.DRUID_STRING_TYPE
+            sql_type = consts.SQL_VARCHAR_TYPE
+        elif type(v) is int or type(v) is float:
+            druid_type = consts.DRUID_LONG_TYPE
+            sql_type = consts.SQL_BIGINT_TYPE
+        schema.append(ColumnSchema(k, sql_type, druid_type))
+    return schema
+
+def parse_array_schema(context, results):
+    schema = []
+    if len(results) == 0:
+        return schema
+    has_headers = context.get(consts.HEADERS_KEY, False)
+    if not has_headers:
+        return schema
+    has_sql_types = context.get(consts.SQL_TYPES_HEADERS_KEY, False)
+    has_druid_types = context.get(consts.DRUID_TYPE_HEADERS_KEY, False)
+    size = len(results[0])
+    for i in range(size):
+        druid_type = None
+        if has_druid_types:
+            druid_type = results[1][i]
+        sql_type = None
+        if has_sql_types:
+            sql_type = results[2][i]
+        schema.append(ColumnSchema(results[0][i], sql_type, druid_type))
+    return schema
+
+def parse_schema(fmt, context, results):
+    if fmt == consts.SQL_OBJECT:
+        return parse_object_schema(results)
+    elif fmt == consts.SQL_ARRAY or fmt == consts.consts.SQL_ARRAY_WITH_TRAILER:
+        return parse_array_schema(context, results)
+    else:
+        return []
+
+def parse_rows(fmt, context, results):
+    if fmt == consts.SQL_ARRAY_WITH_TRAILER:
+        rows = results['results']
+    elif fmt == consts.SQL_ARRAY:
+        rows = results
+    else:
+        return results
+    if not context.get(consts.HEADERS_KEY, False):
+        return rows
+    header_size = 1
+    if context.get(consts.SQL_TYPES_HEADERS_KEY, False):
+        header_size += 1
+    if context.get(consts.DRUID_TYPE_HEADERS_KEY, False):
+        header_size += 1
+    return rows[header_size:]
 
 class SqlResponse:
 
@@ -93,15 +159,12 @@ class SqlResponse:
         self.http_response = response
         self._json = None
         self._rows = None
+        self._schema = None
         if not self.ok():
             return
  
     def format(self):
-        fmt = self.request.result_format
-        if fmt is None:
-            return consts.SQL_OBJECT
-        else:
-            return fmt.lower()
+        return self.request.format()
 
     def ok(self):
         return self.http_response.status_code == requests.codes.ok
@@ -131,19 +194,19 @@ class SqlResponse:
         if self._json is None:
             self._json = self.http_response.json()
         return self._json
-
     
     def rows(self):
         if self._rows is None:
             json = self.json()
             if json is None:
-                return None
-            fmt = self.format()
-            if fmt == consts.SQL_ARRAY_WITH_TRAILER:
-                self._rows = json['results']
-            elif fmt == consts.SQL_OBJECT or fmt == consts.SQL_ARRAY:
-                self._rows = json
+                return self.response.text
+            self._rows = parse_rows(self.format(), self.request.context, json)
         return self._rows
+
+    def schema(self):
+        if self._schema is None:
+            self._schema = parse_schema(self.format(), self.request.context, self.results())
+        return self._schema
 
     def profile(self):
         """

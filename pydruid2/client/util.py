@@ -40,10 +40,7 @@ def dict_get(dict, key, default=None):
     """
     if dict is None:
         return default
-    try:
-        return dict[key]
-    except KeyError:
-        return default
+    return dict.get(key, default)
 
 #-------- Network --------
 

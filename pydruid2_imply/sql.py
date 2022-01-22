@@ -12,19 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from pydruid2.client.error import DruidError
-from pydruid2.client.sql import SqlRequest, ColumnSchema
+from pydruid2.client import consts as base_consts
+from pydruid2.client.sql import SqlRequest, ColumnSchema, parse_schema, parse_rows
 from . import consts
 
-def is_talaria(context):
+def async_type(context):
     if context is None:
-        return False
+        return consts.ASYNC_BROKER_ENGINE
     value = context.get(consts.TALARIA_KEY, None)
     if value is None:
-        return False
+        return consts.ASYNC_BROKER_ENGINE
     if value is True:
-        return True
-    return value == consts.TALARIA_INDEXER or value == consts.TALARIA_SERVER
+        return consts.ASYNC_TALARIA_INDEXER_ENGINE
+    if value == consts.TALARIA_INDEXER or value == consts.TALARIA_SERVER:
+        return consts.ASYNC_TALARIA_SERVER_ENGINE
+    return consts.ASYNC_BROKER_ENGINE
+
+def is_talaria(context):
+    engine = async_type(context)
+    return engine == consts.ASYNC_TALARIA_INDEXER_ENGINE or engine == consts.ASYNC_TALARIA_SERVER_ENGINE
 
 class ImplySqlRequest(SqlRequest):
 
@@ -43,6 +51,15 @@ class ImplySqlRequest(SqlRequest):
 
     def is_async(self):
         return self.async_mode is not None
+
+    def async_type(self):
+        return async_type(self.context)
+
+    def format(self):
+        if is_talaria(self.context):
+            return base_consts.SQL_ARRAY
+        else:
+            return SqlRequest.format(self)
 
     def run(self):
         if self.is_async():
@@ -69,18 +86,16 @@ class AsyncResponse:
         self._results = None
         self._details = None
         self._schema = None
+        self._rows = None
         if self._error is not None:
             return
         
         self.response_obj = response.json()
-        if is_talaria(request.context):
-            # Talaria query via normal query path
-            self._id = self.response_obj[0]['TASK']
-            self._state = consts.ASYNC_RUNNING
-        else:
-            # Async query (Talaria or Broker) via Async path
-            self._id = self.response_obj['asyncResultId']
-            self._state = self.response_obj['state']
+        self._id = self.response_obj['asyncResultId']
+        self._state = self.response_obj['state']
+
+    def format(self):
+        return self.request.format()
 
     def id(self):
         return self._id
@@ -109,13 +124,17 @@ class AsyncResponse:
                 except KeyError:
                     self.error = self._status['error']
         return self._status
-
-    def wait_done(self):
+        
+    def join(self):
         if not self.done():
             self.status()
-            if not self.done():
-                raise DruidError("Results not yet available. State = " + self._state)
-        if not self.ok():
+            while not self.done():
+                time.sleep(0.1)
+                self.status()
+        return self.done()
+
+    def wait_done(self):
+        if not self.join():
             raise DruidError("Query failed: " + self._error)
 
     def results(self):
@@ -132,26 +151,36 @@ class AsyncResponse:
 
     def schema(self):
         if self._schema is None:
-            headers = self.results()[0:3]
-            size = len(headers[0])
-            self._schema = []
-            for i in range(size):
-                self._schema.append(ColumnSchema(headers[0][i], headers[2][i], headers[1][i]))
+            results = self.results()
+            if is_talaria(self.request.context):
+                size = len(results[0])
+                self._schema = []
+                for i in range(size):
+                    self._schema.append(ColumnSchema(results[0][i], results[2][i], results[1][i]))
+            else:
+                self._schema = parse_schema(self.format(), self.request.context, results)
         return self._schema
 
     def rows(self):
-        return self.results()[3:]
+        if self._rows is None:
+            results = self.results()
+            if is_talaria(self.request.context):
+                self._rows = results[3:]
+            elif results is None:
+                return self.response.text
+            else:
+                self._rows = parse_rows(self.format(), self.request.context, results)
+        return self._rows
         
     def join(self):
-        while not self.done():
+        if not self.done():
             self.status()
-            if not self.done():
-                time.sleep(2)
+            while not self.done():
+                time.sleep(0.1)
+                self.status()
         return self.done()
 
     def wait(self):
-        self.join()
-        if not self.ok():
-            raise DruidError("Query failed")
-        return self.results()
+        self.wait_done()
+        return self.rows()
         

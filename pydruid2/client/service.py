@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from optparse import Option
+from urllib.parse import quote
 import requests
 from .util import is_blank, dict_get
 
@@ -85,7 +85,8 @@ class Service:
         """
         url = self.endpoint + req
         if args is not None:
-            url = url.format(*args)
+            quoted = [quote(arg) for arg in args]
+            url = url.format(*quoted)
         return url
     
     def get(self, req, args=None, params=None, require_ok=True) -> requests.Request:

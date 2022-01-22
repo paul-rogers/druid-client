@@ -60,6 +60,11 @@ SQL_ARRAY = 'array'
 SQL_ARRAY_WITH_TRAILER = 'arrayWithTrailer'
 SQL_CSV = 'csv'
 
+# SQL and Native context fields
+HEADERS_KEY = 'headers'
+SQL_TYPE_HEADERS_KEY = 'sqlTypesHeader'
+DRUID_TYPE_HEADERS_KEY = 'typesHeader'
+
 # Type names as known to Druid and mentioned in documentation.
 DRUID_STRING_TYPE = "string"
 DRUID_LONG_TYPE = "long"

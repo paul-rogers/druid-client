@@ -117,14 +117,13 @@ class ClusterConfig:
         return service_url(scheme, host, port)
 
     def client_for(self, client, extn):
-        defn = self.extensions.get(extn, None)
-        if defn is None or defn.extn_points.client is None:
-            return None
-        return defn.extn_points.client(client)
+        return self.extensions.client_for(client, extn)
 
     def extension_names(self):
-        return [defn.key for defn in self.extensions.values()]
+        return self.extensions.names()
 
     def extension_list(self):
-        return [[defn.key, defn.name, defn.extn_points.summary]
-                for defn in self.extensions.values()]
+        return self.extensions.list()
+
+    def register_services(self, service_map):
+        self.extensions.register_services(service_map)

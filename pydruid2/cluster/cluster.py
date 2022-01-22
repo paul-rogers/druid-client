@@ -29,6 +29,8 @@ service_map = {
     consts.BROKER: Broker
     }
 
+extensions_loaded = False
+
 def register_service(role, service_class):
     """
     Registers a custom service client class.
@@ -149,6 +151,7 @@ class Cluster:
         self._overlord = None
         self._metadata = None
         self._table_metadata = {}
+        self._config.register_services(service_map)
         self.refresh()
     
     def client(self):
@@ -175,19 +178,19 @@ class Cluster:
         old_services = self._services
         self._services = {}
         for key, service in servers.items():
-            old_service = dict_get(old_services, key)
+            old_service = old_services.get(key, None)
             if old_service is None or not old_service.has_roles(service.roles()):
                 service.map_url()
                 self._services[key] = service
             else:
                 self._services[key] = old_service
-                del(old_services, key)
                 if self._coordinator == old_service:
                     self._coordinator = None
                 if self._overlord == old_service:
                     self._overlord = None
-        for service in old_services.values():
-            service.close()
+        for key, service in old_services.items():
+            if key not in self._services:
+                service.close()
     
     def servers(self):
         """
@@ -205,11 +208,18 @@ class Cluster:
         return None
     
     def for_role(self, role):
+        self.refresh()
         services = []
         for service in self._services.values():
             if service.is_a(role):
                 services.append(service)
         return services
+
+    def clients_for_role(self, role):
+        clients = []
+        for service in self.for_role(role):
+            clients.append(service.client(role))
+        return clients
 
     def coord(self):
         """
