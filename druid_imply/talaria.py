@@ -1,4 +1,4 @@
-from pydruid2.client.service import Service, check_error
+from druid_client.client.service import Service, check_error
 
 TALARIA_BASE = '/talaria/v1'
 REQ_TASKS = TALARIA_BASE + '/tasks'

@@ -1,19 +1,19 @@
-# `pydruid2` Internal Design
+# `druid-client` Internal Design
 
-`pydruid2` is divided into a set of modules. The lowest levels provide basic 
+`druid-client` is divided into a set of modules. The lowest levels provide basic 
 API support, while higher levels provide additional abstractions which build
 on the basics. An application can import only those parts which it needs.
 
 ## Root
 
-The root `pydruid2` package contains only one function: to create a connection.
+The root `druid-client` package contains only one function: to create a connection.
 All other operations reside within the other modules.
 
 ## Client
 
 The `client` module provides connectivity to the Druid Router or Broker, along
 with the services common to those two roles, which basically is just
-native and SQL queries. When the user first connects, `pydruid2` does not know
+native and SQL queries. When the user first connects, `druid-client` does not know
 if the URL provided is for a Router or Broker, so the client is a hybrid.
 
 The `client`package provides classes to work with SQL queries along with a set
@@ -53,12 +53,12 @@ information.
 ## Extensions
 
 Druid is well-known for its extreme extensibility. Users can add new native
-query types, new services and more. `pydruid2` attempts to echo this flexibility
+query types, new services and more. `druid-client` attempts to echo this flexibility
 by allowing applications to define custom roles:
 
 * The role was given a name in Druid.
 * Define the role as a subclass of `Service`.
 * Call `cluster.register_service` to register the class with the name.
 
-Now, you can request your service by name and `pydruid2` will create instances
+Now, you can request your service by name and `druid-client` will create instances
 of your class and add them to its service cache.

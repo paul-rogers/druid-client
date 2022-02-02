@@ -47,7 +47,7 @@ class ServiceMapper:
         A triple with the protocol (AKA schema): http or https, the
         local host name and the local port. The combination, when converted
         by the caller to a URL, must be accessible to the machine on which
-        the pydruid2 library is running.
+        the druid-client library is running.
         """
         if (prefer_tls and tls_port != -1) or http_port == -1:
             return (consts.TLS_PROTOCOL, host, tls_port)

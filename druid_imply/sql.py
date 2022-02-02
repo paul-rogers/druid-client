@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import time
-from pydruid2.client.error import DruidError
-from pydruid2.client import consts as base_consts
-from pydruid2.client.sql import SqlRequest, ColumnSchema, parse_schema, parse_rows
+from druid_client.client.error import ClientError, DruidError
+from druid_client.client import consts as base_consts
+from druid_client.client.sql import SqlRequest, ColumnSchema, AbstractSqlQueryResult, parse_schema, parse_rows
 from . import consts
 
 def async_type(context):
@@ -67,35 +67,83 @@ class ImplySqlRequest(SqlRequest):
         else:
             return self.imply_client.sql_query(self)
     
-class AsyncResponse:
+class AbstractAsyncQueryResult(AbstractSqlQueryResult):
 
     def __init__(self, request, response):
+        AbstractSqlQueryResult.__init__(self, request, response)
         self.imply_client = request.imply_client
         self._status = None
-        self._error = None
-        self.http_response = response
-        self.report = None
-        self.request = request
-
-        # Typical response:
-        # {'asyncResultId': '6f7b514a446d4edc9d26a24d4bd03ade_fd8e242b-7d93-431d-b65b-2a512116924c_bjdlojgj',
-        # 'state': 'INITIALIZED'}
-        self._id = None
-        self._state = None
-        self.response_obj = None
         self._results = None
         self._details = None
         self._schema = None
         self._rows = None
-        if self._error is not None:
-            return
-        
-        self.response_obj = response.json()
-        self._id = self.response_obj['asyncResultId']
-        self._state = self.response_obj['state']
 
-    def format(self):
-        return self.request.format()
+    def status(self):
+        """
+        Polls Druid for an update on the query run status.
+
+        Format of the return value depends on the Async protocol used.
+        """
+        raise NotImplementedError
+
+    def details(self):
+        """
+        Returns excecution details for the query, if any.
+        """
+        raise NotImplementedError
+
+    def done(self):
+        """
+        Reports if the query is done: succeeded or failed.
+        """
+        raise NotImplementedError
+
+    def finishd(self):
+        """
+        Reports if the query is succeeded.
+        """
+        raise NotImplementedError
+
+    def state(self):
+        """
+        Reports the engine-specific query state.
+
+        Updated after each call to status().
+        """
+        raise NotImplementedError
+
+    def join(self):
+        if not self.done():
+            self.status()
+            while not self.done():
+                time.sleep(0.1)
+                self.status()
+        return self.finished()
+
+    def wait_done(self):
+        if not self.join():
+            raise DruidError("Query failed: " + self._error)
+
+    def wait(self):
+        self.wait_done()
+        return self.rows()
+
+class AsyncQueryResult(AbstractAsyncQueryResult):
+
+    def __init__(self, request, response):
+        AbstractAsyncQueryResult.__init__(self, request, response)
+
+        # Typical response:
+        # {'asyncResultId': '6f7b514a446d4edc9d26a24d4bd03ade_fd8e242b-7d93-431d-b65b-2a512116924c_bjdlojgj',
+        # 'state': 'INITIALIZED'}
+        if self.is_response_ok():
+            self.response_obj = response.json()
+            self._id = self.response_obj['asyncResultId']
+            self._state = self.response_obj['state']
+        else:
+            self.response_obj = None
+            self._id = None
+            self._state = consts.ASYNC_FAILED
 
     def id(self):
         return self._id
@@ -106,44 +154,39 @@ class AsyncResponse:
     def done(self):
         return self._state == consts.ASYNC_FAILED or self._state == consts.ASYNC_COMPLETE
 
-    def ok(self):
+    def finished(self):
         return self._state == consts.ASYNC_COMPLETE
 
     def error(self):
         return self._error
 
+    def check_valid(self):
+        if self._id is None:
+            raise ClientError("Operation is invalid on a failed query")
+
     def status(self):
+        self.check_valid()
         self._status = self.imply_client.async_status(self._id)
         self._state = self._status['state']
         if self._state == consts.ASYNC_FAILED:
             try:
-                self.error = self._status['error']['errorMessage']
+                self._error = self._status['error']['errorMessage']
             except KeyError:
                 try:
-                    self.error = self._status['error']['error']
+                    self._error = self._status['error']['error']
                 except KeyError:
-                    self.error = self._status['error']
+                    self._error = self._status['error']
         return self._status
         
-    def join(self):
-        if not self.done():
-            self.status()
-            while not self.done():
-                time.sleep(0.1)
-                self.status()
-        return self.done()
-
-    def wait_done(self):
-        if not self.join():
-            raise DruidError("Query failed: " + self._error)
-
     def results(self):
+        self.check_valid()
         if self._results is None:
             self.wait_done()
             self._results = self.imply_client.async_results(self._id)
         return self._results
 
     def details(self):
+        self.check_valid()
         if self._details is None:
             self.wait_done()
             self._details = self.imply_client.async_details(self._id)
@@ -171,16 +214,3 @@ class AsyncResponse:
             else:
                 self._rows = parse_rows(self.format(), self.request.context, results)
         return self._rows
-        
-    def join(self):
-        if not self.done():
-            self.status()
-            while not self.done():
-                time.sleep(0.1)
-                self.status()
-        return self.done()
-
-    def wait(self):
-        self.wait_done()
-        return self.rows()
-        

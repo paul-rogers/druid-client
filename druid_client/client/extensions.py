@@ -19,7 +19,7 @@ discovered_plugins = {
     name: importlib.import_module(name)
     for _, name, _
     in pkgutil.iter_modules()
-    if name.startswith('pydruid2_')
+    if name.startswith('druid_')
 }
 
 extension_manager = None
@@ -36,7 +36,7 @@ class ExtensionDescriptor:
     def __init__(self, name, module):
         self.name = name
         self.module = module
-        self.key = name[len('pydruid2_'):]
+        self.key = name[len('pdruid_'):]
         self.extn_points = ExtensionPoints(self.key)
 
 client_code = \
@@ -83,7 +83,7 @@ class Extensions:
                 self.extensions[defn.key] = defn
             except Exception:
                 # Print a message, but continue, so that a bad extension does not
-                # prevent pydruid2 from working.
+                # prevent druid-client from working.
                 print("Error when registering module '{}'', error: {}".format(name), str(e))
         for key, defn in self.extensions.items():
             if defn.extn_points.client is not None:

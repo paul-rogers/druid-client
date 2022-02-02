@@ -160,14 +160,14 @@ class Service:
         Issues a POST request for the given URL on this
         node, with the given payload and optional URL query 
         parameters. The payload is serialized to JSON.
+
+        Does not parse error messages: that is up to the caller.
         """
         url = self.build_url(req, args)
         if self.cluster_config.trace:
             print("url:", url)
             print("body:", body)
-        r = self.session.post(url, json=body, headers=headers)
-        check_error(r)
-        return r
+        return self.session.post(url, json=body, headers=headers)
 
     #-------- Common --------
 

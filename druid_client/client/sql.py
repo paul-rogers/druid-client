@@ -152,23 +152,79 @@ def parse_rows(fmt, context, results):
         header_size += 1
     return rows[header_size:]
 
-class SqlResponse:
+class AbstractSqlQueryResult:
+    """
+    Defines the core protocol for Druid SQL queries.
+    """
 
     def __init__(self, request, response):
         self.request = request
         self.http_response = response
-        self._json = None
-        self._rows = None
-        self._schema = None
-        if not self.ok():
+        code = response.status_code
+        if self.is_response_ok():
+            self._error = None
             return
- 
+        try:
+            self._error = response.json()
+        except Exception:
+            self._error = response.text
+            if self._error is None or len(self.error == 0):
+                self._error = "Failed with HTTP status {}".format(code)
+
     def format(self):
         return self.request.format()
 
     def ok(self):
-        return self.http_response.status_code == requests.codes.ok
+        """
+        Reports if the query succeeded.
+
+        The query rows and schema are available only if ok() returns True.
+        """
+        return self.is_response_ok()
     
+    def is_response_ok(self):
+        code = self.http_response.status_code
+        return code == requests.codes.ok or code == requests.codes.accepted
+ 
+    def error(self):
+        """
+        If the query fails, returns the error, if any provided by Druid.
+        """
+        return self._error
+
+    def id(self):
+        """
+        Returns the unique identifier for the query.
+        """
+        raise NotImplementedError
+
+    def rows(self):
+        """
+        Returns the rows of data for the query.
+
+        Druid supports many data formats. The method makes its best
+        attempt to map the format into an array of rows of some sort.
+        """
+        raise NotImplementedError
+
+    def schema(self):
+        """
+        Returns the data schema as a list of ColumnSchema objects.
+
+        Druid supports many data formats, not all of them provide
+        schema information. This method makes its best attempt to
+        extract the schema from the query results.
+        """
+        raise NotImplementedError
+
+class SqlQueryResult(AbstractSqlQueryResult):
+
+    def __init__(self, request, response):
+        AbstractSqlQueryResult.__init__(self, request, response)
+        self._json = None
+        self._rows = None
+        self._schema = None
+
     def error(self):
         if self.ok():
             return None

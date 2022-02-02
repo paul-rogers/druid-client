@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydruid2.client.client import REQ_ROUTER_SQL
-from pydruid2.client.error import ClientError
-from .talaria_query import TalariaQueryHandle
-from .sql import ImplySqlRequest, AsyncResponse, is_talaria
+from druid_client.client.client import REQ_ROUTER_SQL
+from druid_client.client.error import ClientError
+from .talaria_query import TalariaQueryResult
+from .sql import ImplySqlRequest, AsyncQueryResult, is_talaria
 from . import consts
 
 REQ_ROUTER_ASYNC_SQL = REQ_ROUTER_SQL + "/async"
@@ -35,13 +35,13 @@ class ImplyClient:
         queries.
 
         If the response appears to be an async Talaria response, returns an
-        async result rather than the usual SqlResponse.
+        async result rather than the usual SqlQueryResult.
         """
         resp = self.client.sql_query(request)
         if not resp.ok():
             return resp
         if is_talaria(request.context):
-            resp = AsyncResponse(request, resp.http_response)
+            resp = AsyncQueryResult(request, resp.http_response)
         return resp
 
     def sql_request(self, sql):
@@ -51,7 +51,7 @@ class ImplyClient:
         response = self.client.post_only_json(REQ_ROUTER_ASYNC_SQL, 
                     request.to_request(), 
                     headers=request.headers)
-        return AsyncResponse(request, response)
+        return AsyncQueryResult(request, response)
 
     def async_status(self, id, timeout_sec=10):
         return self.client.get_json(REQ_ROUTER_ASYNC_STATUS, args=[id],
@@ -70,4 +70,4 @@ class ImplyClient:
             request = self.client.sql_request(request)
         request.with_context({consts.TALARIA_KEY: consts.TALARIA_SERVER})
         resp = self.client.sql_query(request)
-        return TalariaQueryHandle(request, resp.http_response)
+        return TalariaQueryResult(request, resp.http_response)

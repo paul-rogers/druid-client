@@ -197,7 +197,7 @@ class Overlord(Service):
 
     def submit_task(self, payload):
         """
-        Submit a task orsupervisor specs to the Overlord.
+        Submit a task or supervisor specs to the Overlord.
         
         Returns the taskId of the submitted task.
 

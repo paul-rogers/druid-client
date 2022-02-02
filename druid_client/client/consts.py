@@ -51,6 +51,11 @@ COMPLETE_TASK = 'complete'
 RUNNING_TASK = 'running'
 WAITING_TASK = 'waiting'
 
+# Task status code
+RUNNING_STATE = 'RUNNING'
+SUCCESS_STATE = 'SUCCESS'
+FAILED_STATE = 'FAILED'
+
 # Default tier name
 DEFAULT_TIER = "_default_tier"
 

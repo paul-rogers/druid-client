@@ -29,9 +29,9 @@ for a single Druid table (data source).
 
 Typical usage:
 
-  import pydruid2
+  import druid-client as dcl
 
-  client = pydruid2.connect("http://localhost:8888")
+  client = dcl.connect("http://localhost:8888")
   client.sql("SELECT * FROM wikipedia LIMIT 10")
 
 See the documentation at (url needed).

@@ -14,7 +14,7 @@
 
 from .service import Service
 from .error import ClientError
-from .sql import SqlRequest, SqlResponse, QueryPlan
+from .sql import SqlRequest, SqlQueryResult, QueryPlan
 from .util import is_blank, dict_get
 
 ROUTER_BASE = '/druid/v2'
@@ -52,7 +52,7 @@ class Client(Service):
         query_obj = request.to_request()
         return (request, query_obj)
 
-    def sql_query(self, request) -> SqlResponse:
+    def sql_query(self, request) -> SqlQueryResult:
         '''
         Submit a SQL query with control over the context, parameters and other
         options. Returns a response with either a detailed error message, or
@@ -60,7 +60,7 @@ class Client(Service):
         '''
         request, query_obj = self._prepare_query(request)
         r = self.post_only_json(REQ_ROUTER_SQL, query_obj, headers=request.headers)
-        return SqlResponse(request, r)
+        return SqlQueryResult(request, r)
 
     def sql(self, sql, *args):
         if len(args) > 0:

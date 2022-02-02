@@ -4,12 +4,12 @@ Druid clusters contain a variety of *services* (also called *roles* or *server t
 
 In a smaller cluster, several servers may run on one machine, each on a distinct port. In a larger cluster, each machine may run a single server. In the largest clusters, multiple copies of each server may run on different machines. Druid identifies each service (or service replica) via a *service url*, which is a triple of (prototol, host name, port). When the Coordinator and Overlord run in the same server, they share the same port. In this case, the unique identifier is a quad of (service, prototol, host name, port).
 
-Druid provides a system table, queryable using SQL, that lists the services in the cluster and their endpoints. `pydruid2` uses the `SERVERS` system table to infer the services and servers in your cluster.
+Druid provides a system table, queryable using SQL, that lists the services in the cluster and their endpoints. `druid-client` uses the `SERVERS` system table to infer the services and servers in your cluster.
 
 ```python
-import pydruid2
+import druid_client as dcl
 
-client = pydruid2.connect('http://localhost:8888')
+client = dcl.connect('http://localhost:8888')
 cluster = client.cluster()
 cluster.services()
 ```
@@ -31,7 +31,7 @@ The output of the above is the list of services within the cluster:
 
 ## Service Client
 
-Each service within the cluster has a specialized `pydruid2` client. For example, to get the Coordinator client:
+Each service within the cluster has a specialized `druid-client` client. For example, to get the Coordinator client:
 
 ```python
 coord = cluster.coord()
@@ -44,7 +44,7 @@ The clients are:
 * `broker()` - Provides the Broker. If more than one, picks the first.
 * `router()` - Provides the Router. If more than one, picks the first.
 
-The `client` above is a generic query client. Upon startup, `pydruid2` does not know if the URL you provided is for a Router or a Broker, so the `Client` provided is the common subset. You can obtain your client from the cluster:
+The `client` above is a generic query client. Upon startup, `druid-client` does not know if the URL you provided is for a Router or a Broker, so the `Client` provided is the common subset. You can obtain your client from the cluster:
 
 ```python
 client = cluster.client()
@@ -52,13 +52,13 @@ client = cluster.client()
 
 ## API Support
 
-`pydruid2` provides support for much of the Druid REST API. Each client provides detailed help:
+`druid-client` provides support for much of the Druid REST API. Each client provides detailed help:
 
 ```python
 help(client)
 ```
 
-`pydruid2` does not support all the Druid APIs. In some cases, the Druid team encourages the use of the SQL system tables instead of REST APis that provide the same information. In other cases, the `pydruid2` team has not yet implemented the API. (Contributions welcome!)
+`druid-client` does not support all the Druid APIs. In some cases, the Druid team encourages the use of the SQL system tables instead of REST APis that provide the same information. In other cases, the `druid-client` team has not yet implemented the API. (Contributions welcome!)
 
 Most APIs are just a simple Python method. For example, for the APIs common to all services:
 
@@ -72,7 +72,7 @@ coord.is_healthy()
 
 In simple cases, the `connect()` call shown above is all you need. However, there are cases where you must provide additional configuration:
 
-* Your cluster runs in Docker, Kubernetes or AWS so that the host IP or port visible to `pydruid2` is differnt than that known within the cluster itself.
+* Your cluster runs in Docker, Kubernetes or AWS so that the host IP or port visible to `druid-client` is different than that known within the cluster itself.
 * Your cluster provides both HTTP (AKA "plain text") and HTTPS (AKA "TLS"), ports and you prefer to use TLS.
 * Your cluster requires a private TLS certificate.
 
@@ -82,25 +82,25 @@ To prefer TLS:
 
 ```python
 url = 'http://localhost:8888'
-client = pydruid2.connect(url, prefer_tls=True)
+client = dcl.connect(url, prefer_tls=True)
 ```
 
 To provide a private TLS certificate:
 
 ```python
-client = pydruid2.connect(url, tls_cert=file_name)
+client = dcl.connect(url, tls_cert=file_name)
 ```
 
 ## URL Map
 
-The out-of-the-box Docker Compose script creates a cluster that works fine with `pydruid2` with no additional configuration. However, if you change the port mapping, or Docker runs on another machine, then you use the `DockerMapper` to provide the needed translation. Example if you change a port mapping:
+The out-of-the-box Docker Compose script creates a cluster that works fine with `druid-client` with no additional configuration. However, if you change the port mapping, or Docker runs on another machine, then you use the `DockerMapper` to provide the needed translation. Example if you change a port mapping:
 
 ```python
-from pydruid2.client.config import DockerMapper
+from druid-client.client.config import DockerMapper
 
 docker_port_map = [[8899, 8888]]
 url_mapper = DockerMapper(port_map=docker_port_map)
-client = pydruid2.connect("http://localhost:8899", mapper=url_mapper)
+client = dcl.connect("http://localhost:8899", mapper=url_mapper)
 ```
 
 The port map lists the port mappings in the same order as Docker: `[external_port, internal_port]`.
@@ -110,14 +110,14 @@ If you need a different translation, simply write the required mapper. See the s
 ## OLD OLD OLD
 
 
-`pydruid2` represents the Druid servies via a `Service` class, with subclasses for each service. `pydruid2` uses the servies system table to learn the services available within your cluster. Then, to use a service, you ask for a `Service` object for that service, then use methods that access each of that services's APIs.
+`druid-client` represents the Druid servies via a `Service` class, with subclasses for each service. `druid-client` uses the servies system table to learn the services available within your cluster. Then, to use a service, you ask for a `Service` object for that service, then use methods that access each of that services's APIs.
 
 The process starts by connecting to your Router or Broker as shown earlier, then request the cluster:
 
 ```python
-import pydruid2
+import druid_client as dcl
 
-client = pydruid2.connect('http://localhost:8888')
+client = dcl.connect('http://localhost:8888')
 cluster = client.cluster()
 cluster.services()
 ```
@@ -151,7 +151,7 @@ typeof(service)
 
 ### REST API
 
-`pydruid2` provides wrappers for  (but not all) REST API messages. You can create custom messages by working directly with the client layer:
+`druid-client` provides wrappers for  (but not all) REST API messages. You can create custom messages by working directly with the client layer:
 
 ```python
 # Example needed

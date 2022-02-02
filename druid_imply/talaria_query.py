@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
-from pydruid2.client.error import DruidError
-from pydruid2.client.sql import ColumnSchema
+from druid_client.client.error import DruidError
+from druid_client.client.sql import ColumnSchema
+from .sql import AbstractAsyncQueryResult
 
 TALARIA_WAITING_STATE = 'WAITING'
 TALARIA_RUNNING_STATE = 'RUNNING'
@@ -22,17 +22,16 @@ TALARIA_COMPLETED_STATE = 'COMPLETED'
 TALARIA_FAILED_STATE = 'FAILED'
 TALARIA_CANCELLED_STATE = 'CANCELLED'
 
-class TalariaQueryHandle:
+class TalariaQueryResult(AbstractAsyncQueryResult):
     """
     Async query that works directly against a Talaria server.
 
-    Primarily for testing and exploration. Use the Async query
+    Primarily for testing and exploration. Use the Async API
     for normal use.
     """
 
     def __init__(self, request, response):
-        self.request = request
-        self.http_response = response
+        AbstractAsyncQueryResult.__init__(self, request, response)
         candidates = request.client.cluster().talaria_role()
         if len(candidates) == 0:
             raise DruidError("No Talaria servers available")
@@ -72,18 +71,6 @@ class TalariaQueryHandle:
         self._state = self._status['state']
         return self._status
        
-    def join(self):
-        if not self.done():
-            self.status()
-            while not self.done():
-                time.sleep(0.1)
-                self.status()
-        return self.done()
-
-    def wait_done(self):
-        if not self.join():
-            raise DruidError("Query failed: " + self._error)
-
     def results(self):
         if self._results is None:
             self.wait_done()

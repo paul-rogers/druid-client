@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from ..client.util import dict_get, endpoint, service_url
 from ..client.error import ConfigError, DruidError, ClientError
 from ..client import consts
@@ -21,6 +22,7 @@ from .router import Router
 from .broker import Broker
 from .metadata import ClusterMetadata
 from .table import TableMetadata
+from .task import Task
 
 service_map = {
     consts.COORDINATOR: Coordinator,
@@ -266,3 +268,14 @@ class Cluster:
             self._table_metadata[table_name] = table
             return table
     
+    def ingest(self, spec=None, file=None):
+        if spec is None and file is None:
+            raise ClientError("Must specify a spec or a file.")
+        if spec is not None and file is not None:
+            raise ClientError("Specify either a spec or a file.")
+        if file is not None:
+            with open(file) as f:
+                spec = json.load(f)
+        if type(spec) is str:
+            spec = json.loads(spec)
+        return Task(self, self.overlord().submit_task(spec), spec=spec)

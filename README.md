@@ -4,18 +4,20 @@
 [Apache Druid](https://druid.apache.org/) or [Imply](https://imply.io/) cluster. 
 `druid-client` picks up where the venerable [pydruid](https://github.com/druid-io/pydruid) lbrary 
 left off to include full SQL support and support for many of of Druid APIs. `druid-client`
-also provides tools to analze tables, plan your cluster and more. ``druid-client`` is usable 
+also provides tools to analze tables, plan your cluster and more. `druid-client` is usable 
 in any Python environment, but is optimized for use in Jupyter, providing a complete interactive
-environent which complements the UI-based Druid console.
+environment which complements the UI-based Druid console.
 
-An extension, `druid-client-imply`, add support for Imply-specific extensions to Apache Druid.
+An extension, `druid-imply`, adds support for Imply-specific extensions to Apache Druid.
 
 ## Install
+
+TODO: Not yet available.
 
 To install:
 
 ```bash
-pip install druid-client
+pip install druid_client
 ```
 
 ## Documentation
@@ -27,9 +29,9 @@ Documentation: [available on GitHub](need link).
 To use `druid-client`, you must first import the library, then connect to your cluster by providing the URL to your Router or Broker instance.
 
 ```python
-import druid_client
+import druid_client as dcl
 
-client = druid_client.connect("http:\\localhost:8888")
+client = dcl.connect("http:\\localhost:8888")
 ```
 
 ## Querying
@@ -44,7 +46,7 @@ native_client = client.pydruid()
 
 See the [`pydruid` examples](https://github.com/druid-io/pydruid] for mor information.
 
-Most new applications now use SQL. To obtain the results of a SQL query agains the example Wikipedia table (datasource) in a "raw" form:
+Most new applications now use SQL. To obtain the results of a SQL query against the example Wikipedia table (datasource) in a "raw" form:
 
 ```python
 sql = '''
