@@ -15,11 +15,13 @@
 import importlib
 import pkgutil
 
+EXTN_PREFIX = 'druid_extn_'
+
 discovered_plugins = {
     name: importlib.import_module(name)
     for _, name, _
     in pkgutil.iter_modules()
-    if name.startswith('druid_')
+    if name.startswith(EXTN_PREFIX)
 }
 
 extension_manager = None
@@ -36,7 +38,7 @@ class ExtensionDescriptor:
     def __init__(self, name, module):
         self.name = name
         self.module = module
-        self.key = name[len('pdruid_'):]
+        self.key = name[len(EXTN_PREFIX):]
         self.extn_points = ExtensionPoints(self.key)
 
 client_code = \

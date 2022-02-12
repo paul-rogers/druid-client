@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import unittest
-from druid_client.client.display import TableDef, pad, padded, ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT, simple_table, border_table
+from druid_client.client.text_table import TableDef, simple_table, border_table
+from druid_client.client.util import pad, padded
+from druid_client.client.base_table import ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT
 
 class TestDisplay(unittest.TestCase):
 

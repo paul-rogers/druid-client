@@ -16,6 +16,7 @@ from .service import Service
 from .error import ClientError
 from .sql import SqlRequest, SqlQueryResult, QueryPlan
 from .util import is_blank, dict_get
+from .display import Display
 
 ROUTER_BASE = '/druid/v2'
 REQ_ROUTER_QUERY = ROUTER_BASE
@@ -34,6 +35,8 @@ class Client(Service):
         Service.__init__(self, cluster_config, endpoint)
         self._query_client = None
         self._extn_cache = {}
+        self.cluster_config.display = Display()
+        self._reports = None
     
     def service(self):
         return 'client'
@@ -102,7 +105,24 @@ class Client(Service):
 
     def table(self, table_name): # -> TableMetadata: but don't want to import unless requested
         return self.cluster().table(table_name)
-   
+    
+    #-------- Display --------
+
+    def show_text(self):
+        self.cluster_config.display.text()
+
+    def show_html(self):
+        self.cluster_config.display.html()
+
+    def _display(self):
+        return self.cluster_config.display
+
+    def show(self):
+        if self._reports is None:
+            from ..show.show import Reports
+            self._reports = Reports(self)
+        return self._reports
+  
     #-------- Misc. --------
 
     # Really belongs in ClusterMetadata, but is so common it is put here,

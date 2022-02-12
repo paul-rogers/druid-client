@@ -20,6 +20,12 @@ To install:
 pip install druid_client
 ```
 
+Dependencies:
+
+* `requests`
+* `pandas` (Optional)
+* `pydruid` (Optional)
+
 ## Documentation
 
 Documentation: [available on GitHub](need link).

@@ -42,6 +42,20 @@ def dict_get(dict, key, default=None):
         return default
     return dict.get(key, default)
 
+def padded(array, width, fill):
+    if array is not None and len(array) >= width:
+        return array
+    if array is None:
+        result = []
+    else:
+        result = array.copy()
+    return pad(result, width, fill)
+    
+def pad(array, width, fill):
+    for _ in range(len(array), width):
+        array.append(fill)
+    return array
+
 #-------- Network --------
 
 def endpoint(host, port):

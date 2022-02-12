@@ -16,6 +16,7 @@ import requests
 import json
 from . import consts
 from .util import filter_null_cols
+from .text_table import TextTable
 
 class ColumnSchema:
 
@@ -217,6 +218,9 @@ class AbstractSqlQueryResult:
         """
         raise NotImplementedError
 
+    def display(self, non_null=False):
+        raise NotImplementedError
+
 class SqlQueryResult(AbstractSqlQueryResult):
 
     def __init__(self, request, response):
@@ -261,7 +265,7 @@ class SqlQueryResult(AbstractSqlQueryResult):
 
     def schema(self):
         if self._schema is None:
-            self._schema = parse_schema(self.format(), self.request.context, self.results())
+            self._schema = parse_schema(self.format(), self.request.context, self.json())
         return self._schema
 
     def profile(self):
@@ -311,6 +315,32 @@ class SqlQueryResult(AbstractSqlQueryResult):
             return None
         return filter_null_cols(self.rows())
 
+    def as_array(self):
+        if self.format() == consts.SQL_OBJECT:
+            rows = []
+            for obj in self.rows():
+                rows.append([v for v in obj.values()])
+            return rows
+        else:
+            return self.rows()
+
+    def show(self, non_null=False):
+        data = None
+        if non_null:
+            data = self.non_null()
+        if data is None:
+            data = self.as_array()
+        disp = self.request.client._display().table()
+        disp.headers([c.name for c in self.schema()])
+        disp.show(data)
+
+    def show_schema(self):
+        disp = self.request.client._display().table()
+        disp.headers(['Name', 'SQL Type', 'Druid Type'])
+        data = []
+        for c in self.schema():
+            data.append([c.name, c.sql_type, c.druid_type])
+        disp.show(data)
 
 PLAN_MARKER = 'DruidQueryRel(query=['
 SIG_MARKER = '], signature=[{'
