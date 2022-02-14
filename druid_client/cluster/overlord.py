@@ -36,6 +36,15 @@ REQ_SUPERVISOR = REQ_SUPERVISORS + '/{}'
 REQ_SUPERVISOR_STATUS = REQ_SUPERVISOR + '/status'
 REQ_SUPERVISOR_HISTORY = REQ_SUPERVISOR + '/history'
 
+# External locks
+EXTERN_BASE = OVERLORD_BASE + '/extern'
+REQ_EXTERN_TASK = EXTERN_BASE + '/task'
+REQ_EXTERN_TASK_BASE = REQ_EXTERN_TASK + '/{}'
+REQ_EXTERN_PING = REQ_EXTERN_TASK_BASE + '/ping'
+REQ_EXTERN_ACTION = REQ_EXTERN_TASK_BASE + '/action'
+REQ_EXTERN_COMPLETE = REQ_EXTERN_TASK_BASE + '/complete'
+REQ_EXTERN_FAILED = REQ_EXTERN_TASK_BASE + '/failed'
+
 class Overlord(Service):
     """
     Represents a Druid Overlord.
@@ -335,3 +344,21 @@ class Overlord(Service):
         See https://druid.apache.org/docs/latest/operations/api-reference.html#get-16
         """
         return self.get_json(REQ_SUPERVISOR_HISTORY, args=[id])
+
+    #-------- External Tasks --------
+    
+    def extern_register(self, task):
+        return self.post_json(REQ_EXTERN_TASK, task)
+
+    def extern_ping(self, id):
+        return self.get_json(REQ_EXTERN_PING, args=[id])
+
+    def extern_action(self, id, action):
+        return self.post_json(REQ_EXTERN_ACTION, action, args=[id])
+
+    def extern_complete(self, id):
+        return self.post_json(REQ_EXTERN_COMPLETE, {}, args=[id])
+
+    def extern_failed(self, id, msg):
+        body = {'error': msg}
+        return self.post_json(REQ_EXTERN_FAILED, body, args=[id])

@@ -153,7 +153,9 @@ class Service:
         node, with the given payload and optional URL query 
         parameters. The payload is serialized to JSON.
         """
-        return self.post_only_json(req, body, args, headers).json()
+        r = self.post_only_json(req, body, args, headers)
+        check_error(r)
+        return r.json()
 
     def post_only_json(self, req, body, args=None, headers=None) -> requests.Request:
         """

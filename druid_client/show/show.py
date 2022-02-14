@@ -51,3 +51,34 @@ class Reports:
 
     def servers(self):
         self.sql('SELECT * FROM sys.servers')
+
+    def _show_obj_list(self, data, cols):
+        self.client()._display().show_object_list(data, cols)
+
+    def _show_object(self, data, labels):
+        self.client()._display().show_object(data, labels)
+
+    def tasks(self):
+        tasks = self.cluster.overlord().tasks()
+        cols = {
+            'id':  'ID',
+            'type': 'Type',
+            'dataSource': 'Table',
+            'statusCode': 'Status'
+        }
+        self._show_obj_list(tasks, cols)
+ 
+    def task(self, id):
+        task = self.cluster.overlord().task_status(id)
+        labels = {
+            'id':  'ID',
+            'type': 'Type',
+            'statusCode': 'Status',
+            'dataSource': 'Table',
+            'createdTime': 'Created',
+            'runnerStatusCode': 'Runner Status',
+            'location': 'Location',
+            'duration': 'Duration (ms)',
+            'errorMsg': 'Error'
+        }
+        self._show_object(task['status'], labels)

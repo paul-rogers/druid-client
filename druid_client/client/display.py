@@ -39,3 +39,36 @@ class Display:
             return HtmlTable()
         else:
             return TextTable()
+    
+    def show_object_list(self, objects, cols):
+        list_to_table(self.table(), objects, cols)
+
+    def show_object(self, obj, labels):
+        object_to_table(self.table(), obj, labels)
+
+def list_to_table(table, objects, cols):
+    cols = infer_keys(objects) if cols is None else cols
+    rows = []
+    for obj in objects:
+        row = []
+        for key in cols.keys():
+            row.append(obj.get(key))
+        rows.append(row)
+    table.headers([head for head in cols.values()])
+    table.show(rows)
+
+def object_to_table(table, obj, labels):
+    labels = infer_keys(obj) if labels is None else labels
+    table_rows = []
+    for key, head in labels.items():
+        table_rows.append([head, obj.get(key)])
+    table.headers(['Key', 'Value'])
+    table.show(table_rows)
+
+def infer_keys(data):
+    if type(data) is list:
+        data = data[0]
+    keys = {}
+    for key in data.keys():
+        keys[key] = key
+    return keys
