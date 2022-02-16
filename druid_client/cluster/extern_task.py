@@ -76,7 +76,7 @@ class ExternalTask:
 
     def action(self, action):
         self.assert_running()
-        return self.overlord.extern_action(self.id, action)
+        return self.overlord().extern_action(self.id, action)
 
     def succeeded(self):
         self.assert_running()

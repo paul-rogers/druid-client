@@ -58,7 +58,7 @@ class Reports:
     def _show_object(self, data, labels):
         self.client()._display().show_object(data, labels)
 
-    def tasks(self):
+    def tasks(self, limit=None):
         tasks = self.cluster.overlord().tasks()
         cols = {
             'id':  'ID',
@@ -66,6 +66,8 @@ class Reports:
             'dataSource': 'Table',
             'statusCode': 'Status'
         }
+        if limit is not None:
+            tasks = tasks[0:limit]
         self._show_obj_list(tasks, cols)
  
     def task(self, id):
