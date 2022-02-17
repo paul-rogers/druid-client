@@ -251,9 +251,19 @@ class Cluster:
             brokers = self.for_role(consts.BROKER)
             if len(brokers) == 0:
                 raise DruidError("No Broker is available.")
-            ## Arbitrarily pick the first one
+            # Arbitrarily pick the first one
             self._broker = brokers[0]
         return self._broker.client(consts.BROKER)
+
+    def router(self):
+        """
+        Returns a client for a Router.
+        """
+        routers = self.for_role(consts.ROUTER)
+        if len(routers) == 0:
+            raise DruidError("No Router is available.")
+        # Arbitrarily pick the first one
+        return routers[0].client(consts.ROUTER)
 
     def metadata(self) -> ClusterMetadata:
         if self._metadata is None:
@@ -264,7 +274,7 @@ class Cluster:
         try:
             return self._table_metadata[table_name]
         except KeyError:
-            table = TableMetadata(self, table_name)
+            table = TableMetadata(self._client, table_name)
             self._table_metadata[table_name] = table
             return table
     

@@ -6,7 +6,7 @@ class Task:
 
     def __init__(self, cluster, id, spec=None):
         self.cluster = cluster
-        self.overlord = cluster.ovrerlord()
+        self.overlord = cluster.overlord()
         self._id = id
         self._spec = spec
         self.status_code = consts.RUNNING_STATE

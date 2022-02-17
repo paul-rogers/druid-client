@@ -45,6 +45,7 @@ REQ_DS_RET_HISTORY = REQ_DS_RET_RULES + '/history'
 DATA_SOURCE_BASE = COORD_BASE + '/datasources'
 REQ_DATASOURCES = DATA_SOURCE_BASE
 REQ_DS_PROPERTIES = REQ_DATASOURCES + '/{}'
+REQ_DROP_DS = REQ_DS_PROPERTIES
 
 # Metadata
 METADATA_BASE = COORD_BASE + '/metadata'
@@ -97,7 +98,6 @@ class Coordinator(Service):
     * `POST /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
     * `POST /druid/coordinator/v1/datasources/{dataSourceName}/markUsed`
     * `POST /druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
-    * `DELETE /druid/coordinator/v1/datasources/{dataSourceName}`
     * `DELETE /druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
     * `DELETE /druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
     * Retention rules
@@ -644,6 +644,32 @@ class Coordinator(Service):
         `GET /druid/coordinator/v1/datasources/{dataSourceName}/tiers`
         """
         return self.get_json(REQ_DS_TIERS, args=[ds_name])
+
+    def drop_data_source(self, ds_name):
+        """
+        Drops a data source.
+
+        Marks as unused all segments belonging to a datasource. 
+
+        Marking all segments as unused is equivalent to dropping the table.
+        
+        Parameters
+        ----------
+        ds_name: str
+            name of the datasource to query
+
+        Returns
+        -------
+        Returns a map of the form 
+        {"numChangedSegments": <number>} with the number of segments in the database whose 
+        state has been changed (that is, the segments were marked as unused) as the result 
+        of this API call.
+
+        Reference
+        ---------
+        `DELETE /druid/coordinator/v1/datasources/{dataSourceName}`
+        """
+        return self.delete_json(REQ_DROP_DS, args=[ds_name])
    
     #-------- Lookups --------
 

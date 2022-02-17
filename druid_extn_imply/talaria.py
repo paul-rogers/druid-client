@@ -2,7 +2,8 @@ from druid_client.client.service import Service, check_error
 
 TALARIA_BASE = '/talaria/v1'
 REQ_TASKS = TALARIA_BASE + '/tasks'
-REQ_POST_TASK = TALARIA_BASE + '/task'
+DELEGATE_BASE = TALARIA_BASE + '/delegate/async'
+REQ_POST_TASK = DELEGATE_BASE + '/task'
 REQ_LEADER = REQ_POST_TASK + '/{}'
 REQ_GET_STATUS = REQ_LEADER + '/status'
 REQ_GET_DETAILS = REQ_LEADER + '/details'

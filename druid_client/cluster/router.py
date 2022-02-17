@@ -15,6 +15,10 @@
 from ..client.client import Client
 from ..client import consts
 
+ROUTER_BASE = '/druid/router/v1'
+REQ_BROKERS = ROUTER_BASE + '/brokers'
+REQ_CLUSTER = ROUTER_BASE + '/cluster'
+
 class Router(Client):
     """
     Client for the Druid Router service.
@@ -37,3 +41,10 @@ class Router(Client):
     
     def service(self):
         return consts.ROUTER
+
+    def brokers(self):
+        return self.get_json(REQ_BROKERS)
+
+    def servers(self):
+        return self.get_json(REQ_CLUSTER)
+

@@ -134,7 +134,10 @@ class TableMetadata:
             consts.COLUMNS_TABLE,
             sql_equality(consts.DRUID_SCHEMA),
             sql_equality(self._name))
-     
+
+    def drop(self):
+        return self._coord().drop_data_source(self._name)
+
     #-------- Tasks --------
 
     def tasks(self, state=None, type=None, max=None, created_time_interval=None):

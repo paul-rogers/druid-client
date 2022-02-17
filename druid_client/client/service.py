@@ -119,7 +119,7 @@ class Service:
         '''
         url = self.build_url(req, args)
         if self.cluster_config.trace:
-            print("url:", url)
+            print("GET:", url)
         r = self.session.get(url, params=params)
         if require_ok:
             check_error(r)
@@ -140,14 +140,14 @@ class Service:
         """
         url = self.build_url(req, args)
         if self.cluster_config.trace:
-            print("url:", url)
+            print("POST:", url)
             print("body:", body)
         r = self.session.post(url, data=body, headers=headers)
         if require_ok:
             check_error(r)
         return r
 
-    def post_json(self, req, body, args=None, headers=None) -> requests.Request:
+    def post_json(self, req, body, args=None, headers=None):
         """
         Issues a POST request for the given URL on this
         node, with the given payload and optional URL query 
@@ -167,9 +167,16 @@ class Service:
         """
         url = self.build_url(req, args)
         if self.cluster_config.trace:
-            print("url:", url)
+            print("POST:", url)
             print("body:", body)
         return self.session.post(url, json=body, headers=headers)
+
+    def delete_json(self, req, args=None, headers=None):
+        url = self.build_url(req, args)
+        if self.cluster_config.trace:
+            print("DELETE:", url)
+        r = self.session.delete(url, headers=headers)
+        return r.json()
 
     #-------- Common --------
 

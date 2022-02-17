@@ -167,6 +167,7 @@ class AsyncQueryResult(AbstractAsyncQueryResult):
     def status(self):
         self.check_valid()
         self._status = self.imply_client.async_status(self._id)
+        print(self._status)
         self._state = self._status['state']
         if self._state == consts.ASYNC_FAILED:
             try:
@@ -175,7 +176,10 @@ class AsyncQueryResult(AbstractAsyncQueryResult):
                 try:
                     self._error = self._status['error']['error']
                 except KeyError:
-                    self._error = self._status['error']
+                    try:
+                        self._error = self._status['error']
+                    except KeyError:
+                        self.error = "Unknown error"
         return self._status
         
     def results(self):
