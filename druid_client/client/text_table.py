@@ -18,12 +18,11 @@ from .base_table import BaseTable
 alignments = ['', '^', '>']
 
 def simple_table(table_def):
-    fmt = ' '.join(table_def.formats)
     table = []
     if table_def.headers is not None:
-        table.append(fmt.format(*table_def.headers))
+        table.append(' '.join(table_def.format_row(table_def.headers)))
     for row in table_def.rows:
-        table.append(fmt.format(*row))
+        table.append(' '.join(table_def.format_row(row)))
     return table
 
 def border_table(table_def):
@@ -67,7 +66,8 @@ class TableDef:
                 self.widths[i] = len(self.headers[i])
         for row in self.rows:
             for i in range(len(row)):
-                self.widths[i] = max(self.widths[i], len(row[i]))
+                if row[i] is not None:
+                    self.widths[i] = max(self.widths[i], len(row[i]))
 
     def apply_widths(self, widths):
         if widths is None:
@@ -92,7 +92,11 @@ class TableDef:
     def format_row(self, data_row):
         row = []
         for i in range(self.width):
-            row.append(self.formats[i].format(data_row[i]))
+            value = data_row[i]
+            if value is None:
+                row.append(' ' * self.widths[i])
+            else:
+                row.append(self.formats[i].format(value))
         return row
 
 class TextTable(BaseTable):
@@ -118,6 +122,8 @@ class TextTable(BaseTable):
         return table_def
 
     def format(self, rows):
+        if rows is None:
+            rows = []
         table_rows = self.formatter(self.compute_def(rows))
         return '\n'.join(table_rows)
     
@@ -126,16 +132,26 @@ class TextTable(BaseTable):
     
     def format_rows(self, rows, min_width, max_width):
         if self._col_fmt is None:
-            if min_width == max_width:
-                return rows
-            else:
-                return self.pad_rows(rows, max_width)
+            return self.default_row_format(rows, min_width, max_width)
+        else:
+            return self.apply_row_formats(rows, max_width)
+        
+    def default_row_format(self, rows, min_width, max_width):
+        new_rows = []
+        if min_width <= max_width:
+            rows = self.pad_rows(rows, max_width)
+        for row in rows:
+            new_row = ['' if v is None else str(v) for v in row]
+            new_rows.append(pad(new_row, max_width, None))
+        return new_rows
+
+    def apply_row_formats(self, rows, max_width):
+        new_rows = []
         fmts = self._col_fmt
         if len(fmts) < max_width:
             fmts = fmts.copy()
             for i in range(len(fmts), max_width):
                 fmts.append(lambda v: v)
-        new_rows = []
         for row in rows:
             new_row = []
             for i in range(len(row)):

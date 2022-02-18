@@ -167,7 +167,6 @@ class AsyncQueryResult(AbstractAsyncQueryResult):
     def status(self):
         self.check_valid()
         self._status = self.imply_client.async_status(self._id)
-        print(self._status)
         self._state = self._status['state']
         if self._state == consts.ASYNC_FAILED:
             try:

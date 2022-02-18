@@ -80,29 +80,34 @@ Gives:
 The raw results are handy when Python code consumes the results, or for a quick check. For other visualizations, and to exercise more control over your queries, you can use the query request and response objects. A string is a request that is assumed to be SQL:
 
 ```python
-
 result = client.sql_query(sql)
 ```
 
 The result can provide the raw results, and it can format the results in various ways. As a simple text table:
 
 ```python
-result.text_table()
+result.show()
 ```
 
 Gives:
 
 ```text
-# results
+channel        count
+#en.wikipedia   6650
+#sh.wikipedia   3969
+#sv.wikipedia   1867
+#ceb.wikipedia  1808
+#de.wikipedia   1357
 ```
 
 Within Jupyter, the results can be formatted as an HTML table:
 
 ```python
-results.table()
+client.show_as_html()
+results.show()
 ```
 
-&lt;Example&gt;
+<img src="doc/imgs/query-html.jpg">Example query table</img>
 
 If [Pandas](need link) is installed, export data a Pandas data frame:
 
@@ -168,7 +173,7 @@ project. Focused on building and running native queries.
 * [`druidpy`](https://pypi.org/project/druidpy/) - Provides simple access ot the most
 commonly used Druid APIs.
 * [`druid-query`](https://pypi.org/project/druid-query/) - Supports SQL and native queries,
-including async sypport.
+including async support.
 
 ## Contributions
 

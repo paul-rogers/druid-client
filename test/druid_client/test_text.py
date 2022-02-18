@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-from druid_client.client.text_table import TableDef, simple_table, border_table
+from druid_client.client.text_table import TextTable, TableDef, simple_table, border_table
 from druid_client.client.util import pad, padded
 from druid_client.client.base_table import ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT
 
@@ -37,43 +37,6 @@ class TestDisplay(unittest.TestCase):
         out2 = padded(out, 3, 10)
         self.assertIsNot(out, out2)
         self.assertEqual(['x', 'x', 10], out2)
-
-    def testSetHeaders(self):
-
-        d = TableDef()
-        d.width = 3
-        d.set_headers(None)
-        self.assertIsNone(d.headers)
-
-        d = TableDef()
-        d.width = 3
-        h = ['a', 'b', 'c']
-        d.set_headers(h)
-        self.assertIs(h, d.headers)
-
-        d = TableDef()
-        d.width = 3
-        h = ['a', 'b', 'c', 'd']
-        d.set_headers(h)
-        self.assertIs(h, d.headers)
-
-        d = TableDef()
-        d.width = 3
-        h = ['a', 'b']
-        d.set_headers(h)
-        self.assertEqual(['a', 'b', ''], d.headers)
-
-        d = TableDef()
-        d.width = 3
-        h = ['a', None, 'c']
-        d.set_headers(h)
-        self.assertEqual(['a', '', 'c'], d.headers)
-
-        d = TableDef()
-        d.width = 3
-        h = ['a', None]
-        d.set_headers(h)
-        self.assertEqual(['a', '', ''], d.headers)
 
     def testFindWidths(self):
 
@@ -190,6 +153,58 @@ class TestDisplay(unittest.TestCase):
             'abcde | hijklmn | pqrstuvwx'
         ]
         self.assertEqual(expected, out)
+
+    def testEmptyTable(self):
+        t = TextTable()
+        out = t.format(None)
+        self.assertEqual('', out)
+
+        t = TextTable()
+        out = t.format([])
+        self.assertEqual('', out)
+
+        t = TextTable()
+        t.headers = []
+        out = t.format([])
+        self.assertEqual('', out)
+
+    def testNoHeaders(self):
+        t = TextTable()
+        out = t.format([['a'], ['ccc', 'd']])
+        expected = [
+            'a    ',
+            'ccc d'
+        ]
+        self.assertEqual(expected, out.split('\n'))
+
+        t = TextTable()
+        t.widths([4, 3])
+        out = t.format([['a'], ['ccc', 'd']])
+        expected = [
+            'a       ',
+            'ccc  d  '
+        ]
+        self.assertEqual(expected, out.split('\n'))
+
+        t = TextTable()
+        t.widths([4, 3])
+        t.alignments([ALIGN_CENTER, ALIGN_RIGHT])
+        out = t.format([['a'], ['ccc', 'd']])
+        expected = [
+            ' a      ',
+            'ccc    d'
+        ]
+        self.assertEqual(expected, out.split('\n'))
+
+        t = TextTable()
+        t.widths([4, 3])
+        t.alignments([ALIGN_CENTER, ALIGN_RIGHT])
+        out = t.format([[1], [333, 4]])
+        expected = [
+            ' 1      ',
+            '333    4'
+        ]
+        self.assertEqual(expected, out.split('\n'))
 
 if __name__ == '__main__':
     unittest.main()

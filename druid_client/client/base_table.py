@@ -83,6 +83,8 @@ class BaseTable:
     def pad_headers(self, width):
         if self._headers is None:
             return None
+        if len(self._headers) == 0:
+            return None
         has_none = False
         for i in range(len(self._headers)):
             if self._headers[i] is None:

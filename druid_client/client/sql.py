@@ -218,8 +218,62 @@ class AbstractSqlQueryResult:
         """
         raise NotImplementedError
 
-    def display(self, non_null=False):
-        raise NotImplementedError
+    def df(self):
+        """
+        Convert the query result to a Pandas data frame.
+
+        Requires that Pandas be installed.
+        
+        Ensure the query returns a limited number of rows as all data
+        is held in memory, where "limited" depends on your needs and memory.
+
+        The SQL type should be "object" (consts.SQL_OBJECT) as the
+        "array" type won't return the column headers.
+        """
+        if not self.ok():
+            return None
+        import pandas as pd
+        fmt = self.format()
+        if fmt == consts.SQL_ARRAY or fmt == consts.SQL_OBJECT:
+            return pd.read_json(self.request.text)
+        elif fmt == consts.ARRAY_WITH_TRAILER:
+            return pd.DataFrame(self.rows())
+        else:
+            return None
+
+    def non_null(self):
+        if not self.ok():
+            return None
+        if self.format() != consts.SQL_OBJECT:
+            return None
+        return filter_null_cols(self.rows())
+
+    def as_array(self):
+        if self.format() == consts.SQL_OBJECT:
+            rows = []
+            for obj in self.rows():
+                rows.append([v for v in obj.values()])
+            return rows
+        else:
+            return self.rows()
+
+    def show(self, non_null=False):
+        data = None
+        if non_null:
+            data = self.non_null()
+        if data is None:
+            data = self.as_array()
+        disp = self.request.client._display().table()
+        disp.headers([c.name for c in self.schema()])
+        disp.show(data)
+
+    def show_schema(self):
+        disp = self.request.client._display().table()
+        disp.headers(['Name', 'SQL Type', 'Druid Type'])
+        data = []
+        for c in self.schema():
+            data.append([c.name, c.sql_type, c.druid_type])
+        disp.show(data)
 
 class SqlQueryResult(AbstractSqlQueryResult):
 
@@ -285,62 +339,6 @@ class SqlQueryResult(AbstractSqlQueryResult):
         except KeyError:
             return None
     
-    def df(self):
-        """
-        Convert the query result to a Pandas data frame.
-
-        Requires that Pandas be installed.
-        
-        Ensure the query returns a limited number of rows as all data
-        is held in memory, where "limited" depends on your needs and memory.
-
-        The SQL type should be "object" (consts.SQL_OBJECT) as the
-        "array" type won't return the column headers.
-        """
-        if not self.ok():
-            return None
-        import pandas as pd
-        fmt = self.format()
-        if fmt == consts.SQL_ARRAY or fmt == consts.SQL_OBJECT:
-            return pd.read_json(self.request.text)
-        elif self.request.result_format == consts.ARRAY_WITH_TRAILER:
-            return pd.DataFrame(self.rows())
-        else:
-            return None
-
-    def non_null(self):
-        if not self.ok():
-            return None
-        if self.format() != consts.SQL_OBJECT:
-            return None
-        return filter_null_cols(self.rows())
-
-    def as_array(self):
-        if self.format() == consts.SQL_OBJECT:
-            rows = []
-            for obj in self.rows():
-                rows.append([v for v in obj.values()])
-            return rows
-        else:
-            return self.rows()
-
-    def show(self, non_null=False):
-        data = None
-        if non_null:
-            data = self.non_null()
-        if data is None:
-            data = self.as_array()
-        disp = self.request.client._display().table()
-        disp.headers([c.name for c in self.schema()])
-        disp.show(data)
-
-    def show_schema(self):
-        disp = self.request.client._display().table()
-        disp.headers(['Name', 'SQL Type', 'Druid Type'])
-        data = []
-        for c in self.schema():
-            data.append([c.name, c.sql_type, c.druid_type])
-        disp.show(data)
 
 PLAN_MARKER = 'DruidQueryRel(query=['
 SIG_MARKER = '], signature=[{'

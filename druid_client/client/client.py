@@ -108,10 +108,10 @@ class Client(Service):
     
     #-------- Display --------
 
-    def show_text(self):
+    def show_as_text(self):
         self.cluster_config.display.text()
 
-    def show_html(self):
+    def show_as_html(self):
         self.cluster_config.display.html()
 
     def _display(self):
