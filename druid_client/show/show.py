@@ -23,10 +23,10 @@ class Reports:
         return self.cluster.client()
 
     def as_text(self):
-        self.client().show_text()
+        self.client().show_as_text()
 
     def as_html(self):
-        self.client().show_html()
+        self.client().show_as_html()
 
     def version(self):
         print(self.client().version())
