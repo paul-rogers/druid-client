@@ -241,7 +241,19 @@ class Coordinator(Service):
 
     #-------- Compaction status --------
 
-    def compaction_config(self):
+    def post_compaction_config(self, config):
+        """
+        Creates or updates the compaction config for a dataSource.
+
+        Reference
+        ---------
+        `POST /druid/coordinator/v1/config/compaction`
+
+        See https://druid.apache.org/docs/latest/operations/api-reference.html#post-4
+        See https://druid.apache.org/docs/latest/configuration/index.html#compaction-dynamic-configuration
+        """
+
+    def compaction_configs(self):
         """
         Returns all compaction configs.
 

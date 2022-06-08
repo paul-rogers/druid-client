@@ -15,7 +15,7 @@
 from .service import Service
 from .error import ClientError
 from .sql import SqlRequest, SqlQueryResult, QueryPlan
-from .util import is_blank, dict_get
+from .util import is_blank
 from .display import Display
 
 ROUTER_BASE = '/druid/v2'
@@ -71,7 +71,7 @@ class Client(Service):
         resp = self.sql_query(sql)
         if resp.ok():
             return resp.rows()
-        raise ClientError(resp.error())
+        raise ClientError(resp.error_msg())
 
     def explain_sql(self, query) -> QueryPlan:
         """
@@ -128,8 +128,8 @@ class Client(Service):
     # Really belongs in ClusterMetadata, but is so common it is put here,
     # depite having to load the cluster package.
     def version(self):
-        status = self.cluster().coord().status()
-        return dict_get(status, 'version')
+        status = self.cluster().coordinator().status()
+        return status.get('version')
 
     def query_client(self):
         """

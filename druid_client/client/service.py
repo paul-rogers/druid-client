@@ -231,8 +231,11 @@ class Service:
 
         See https://druid.apache.org/docs/latest/operations/api-reference.html#process-information
         """
-        result = self.get_json(REQ_IN_CLUSTER)
-        return dict_get(result, 'selfDiscovered', False)
+        try:
+            result = self.get_json(REQ_IN_CLUSTER)
+            return dict_get(result, 'selfDiscovered', False)
+        except ConnectionError:
+            return False
 
-    def enable_trace(self, option=True):
+    def trace(self, option=True):
         self.cluster_config.trace = option

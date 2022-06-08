@@ -16,6 +16,7 @@ import time
 from druid_client.client.error import ClientError, DruidError
 from druid_client.client import consts as base_consts
 from druid_client.client.sql import SqlRequest, ColumnSchema, AbstractSqlQueryResult, parse_schema, parse_rows
+import druid_client.client.consts as druid_consts
 from . import consts
 
 def async_type(context):
@@ -191,7 +192,7 @@ class AsyncQueryResult(AbstractAsyncQueryResult):
     def details(self):
         self.check_valid()
         if self._details is None:
-            self.wait_done()
+            self.join()
             self._details = self.imply_client.async_details(self._id)
         return self._details
 
@@ -216,4 +217,90 @@ class AsyncQueryResult(AbstractAsyncQueryResult):
                 return self.response.text
             else:
                 self._rows = parse_rows(self.format(), self.request.context, results)
+        return self._rows
+
+class SqlTaskResult(AbstractAsyncQueryResult):
+
+    def __init__(self, request, response):
+        AbstractAsyncQueryResult.__init__(self, request, response)
+
+        # Typical response:
+        # {'taskId': '6f7b514a446d4edc9d26a24d4bd03ade_fd8e242b-7d93-431d-b65b-2a512116924c_bjdlojgj',
+        # 'state': 'RUNNING'}
+        if self.is_response_ok():
+            self.response_obj = response.json()
+            self._id = self.response_obj['taskId']
+            self._state = self.response_obj['state']
+        else:
+            self.response_obj = None
+            self._id = None
+            self._state = consts.SQL_TASK_FAILED
+
+    def id(self):
+        return self._id
+
+    def state(self):
+        return self._state
+
+    def done(self):
+        return self._state == druid_consts.FAILED_STATE or self._state == druid_consts.SUCCESS_STATE
+
+    def finished(self):
+        return self._state == druid_consts.SUCCESS_STATE
+
+    def error(self):
+        return self._error
+
+    def check_valid(self):
+        if self._id is None:
+            raise ClientError("Operation is invalid on a failed query")
+
+    def overlord(self):
+        return self.imply_client.client.cluster().overlord()
+
+    def status(self):
+        self.check_valid()
+        # Example:
+        # {'task': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6', 
+        # 'status': {
+        #   'id': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6', 
+        #   'groupId': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6', 
+        #   'type': 'talaria0', 'createdTime': '2022-04-28T23:19:50.331Z', 
+        #   'queueInsertionTime': '1970-01-01T00:00:00.000Z', 
+        #   'statusCode': 'RUNNING', 'status': 'RUNNING', 'runnerStatusCode': 'PENDING', 
+        #   'duration': -1, 'location': {'host': None, 'port': -1, 'tlsPort': -1}, 
+        #   'dataSource': 'w000', 'errorMsg': None}}
+        self._status = self.overlord().task_status(self._id)
+        self._state = self._status['status']['status']
+        if self._state == druid_consts.FAILED_STATE:
+            self._error = self._status['status']['errorMsg']
+        return self._status
+        
+    def results(self):
+        self.check_valid()
+        if self._results is None:
+            self.wait_done()
+            self._results = self.imply_client.sql_task_results(self._id)
+        return self._results
+
+    def details(self):
+        self.check_valid()
+        if self._details is None:
+            self.join()
+            self._details = self.imply_client.sql_task_details(self._id)
+        return self._details
+
+    def schema(self):
+        if self._schema is None:
+            results = self.results()
+            size = len(results[0])
+            self._schema = []
+            for i in range(size):
+                self._schema.append(ColumnSchema(results[0][i], results[2][i], results[1][i]))
+        return self._schema
+
+    def rows(self):
+        if self._rows is None:
+            results = self.results()
+            self._rows = results[3:]
         return self._rows

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import json
-from ..client.util import dict_get, endpoint, service_url
+from ..client.util import endpoint, service_url
 from ..client.error import ConfigError, DruidError, ClientError
 from ..client import consts
 from .coord import Coordinator
@@ -124,7 +124,7 @@ class ServiceConfig:
             return ClientError("Server {} does not provide role {}".format(self._url, role))
         if role_def.client is not None:
             return role_def.client
-        cls = dict_get(service_map, role)
+        cls = service_map.get(role)
         if cls is None:
             raise ConfigError("No client class defined for role " + role)
         role_def.client = cls(self.cluster_config, self._url)
@@ -223,7 +223,7 @@ class Cluster:
             clients.append(service.client(role))
         return clients
 
-    def coord(self):
+    def coordinator(self):
         """
         Returns the client for the lead Coordinator.
         """

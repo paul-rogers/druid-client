@@ -164,6 +164,73 @@ Some dependencies are optional:
 
 `druid-client` is designed for extensibility. You can add support for custom services, custom managment tools, custom output formats, and more. See the [Documentation](need link) for details.
 
+## Helpful Additions
+
+If you are setting up or debugging a Druid cluster, several addtional Python libraries
+are handy. This is especially true if you work with the Druid integration tests and
+need to understand the state of the cluster.
+
+* Use [Kazoo](https://pypi.org/project/kazoo/) to poke around inside Zookeeper.
+* Use [MySQL Connector/Python]
+  (https://dev.mysql.com/doc/connector-python/en/connector-python-example-connecting.html)
+  to explore the Druid metadata storage database.
+
+Kazoo example:
+
+```Python
+from kazoo.client import KazooClient
+zk = KazooClient(hosts='localhost:2181')
+zk.start()
+zk.get_children('/druid/internal-discovery')
+zk.stop()
+```
+
+Displays:
+
+```text
+['INDEXER',
+ 'PEON',
+ 'BROKER',
+ 'OVERLORD',
+ 'MIDDLE_MANAGER',
+ 'COORDINATOR',
+ 'HISTORICAL',
+ 'ROUTER',
+ 'custom-node-role']
+```
+
+MySQL example:
+
+```python
+def db_query(sql):
+    cursor = conn.cursor()
+    cursor.execute(sql)
+    for item in cursor:
+        print(item)
+    cursor.close()
+
+import mysql.connector
+conn = mysql.connector.connect(user="druid", password='diurd',
+                              host='localhost',
+                              database='druid')
+db_query('show tables')
+```
+
+Displays:
+
+```text
+('druid_audit',)
+('druid_config',)
+('druid_dataSource',)
+('druid_pendingSegments',)
+('druid_rules',)
+('druid_segments',)
+('druid_supervisors',)
+('druid_tasklocks',)
+('druid_tasklogs',)
+('druid_tasks',)
+```
+
 ## Related Projects
 
 `druid-client` is not the only Druid library available. Others include:

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aiohttp import ClientError
 from .util import dict_get, split_host_url, service_url
 from . import consts
 from .extensions import load_extensions
@@ -54,6 +55,37 @@ class ServiceMapper:
         else:
             return (consts.PLAIN_TEXT_PROTOCOL, host, http_port)
 
+class HostMapping:
+
+    def __init__(self, internal_host, external_port=None, internal_port=None):
+        self.internal_host = internal_host
+        self.external_port = external_port
+        self.internal_port = internal_port
+
+    def map_port(self, port):
+        return self.external_port if self.internal_port == port else None
+
+class DockerClusterMapper(ServiceMapper):
+
+    def __init__(self, docker_host="localhost", port_map=[]):
+        self.docker_host = docker_host
+        self.host_map = {}
+        for item in port_map:
+            self.host_map[item.internal_host] = item
+
+    def url_for(self, host, http_port, tls_port, prefer_tls):
+        entry = self.host_map.get(host)
+        if entry is None:
+            return ServiceMapper.url_for(self, self.docker_host, http_port, tls_port, prefer_tls)
+        local_http_port = entry.map_port(http_port)
+        if prefer_tls or local_http_port is None:
+            port = entry.map_port(tls_port)
+            if port is not None:
+                return (consts.TLS_PROTOCOL, self.docker_host, port)
+        if local_http_port is not None:
+            return (consts.PLAIN_TEXT_PROTOCOL, self.docker_host, local_http_port)
+        return ServiceMapper.url_for(self, self.docker_host, http_port, tls_port, prefer_tls)
+        
 class DockerMapper(ServiceMapper):
     """
     Maps cluster services to local URLs for Druid running in Docker.
@@ -73,7 +105,7 @@ class DockerMapper(ServiceMapper):
             The IP address or name of the host on which Docker is running.
 
         port_map : [], Default = []
-            An array of Docker-style port mappings, where each entry is
+            An array of Docker host/port mappings, where each entry is
             a two-element array or tuple of the form
             (external-port, internal_port).
         """
@@ -83,9 +115,9 @@ class DockerMapper(ServiceMapper):
             self.port_map[pair[1]] = pair[0]
 
     def url_for(self, host, http_port, tls_port, prefer_tls):
-        local_http_port = dict_get(self.port_map, http_port)
+        local_http_port = self.port_map.get(http_port)
         if prefer_tls or local_http_port is None:
-            port = dict_get(self.port_map, tls_port)
+            port = self.port_map[tls_port]
             if port is not None:
                 return (consts.TLS_PROTOCOL, self.docker_host, port)
         if local_http_port is not None:
@@ -97,9 +129,9 @@ class ClusterConfig:
     def __init__(self, config):
         self.options = config
         self.cluster = None
-        self.service_mapper = dict_get(config, 'mapper', ServiceMapper())
-        self.tls_cert = dict_get(config, 'tls_cert')
-        self.prefer_tls = dict_get(config, 'prefer_tls', False)
+        self.service_mapper = config.get('mapper', ServiceMapper())
+        self.tls_cert = config.get('tls_cert')
+        self.prefer_tls = config.get('prefer_tls', False)
         self.extensions = load_extensions()
 
         # Enable this option to see the URLs as they are sent.

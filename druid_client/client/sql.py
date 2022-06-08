@@ -169,7 +169,7 @@ class AbstractSqlQueryResult:
             self._error = response.json()
         except Exception:
             self._error = response.text
-            if self._error is None or len(self.error == 0):
+            if self._error is None or len(self._error) == 0:
                 self._error = "Failed with HTTP status {}".format(code)
 
     def format(self):
@@ -192,6 +192,20 @@ class AbstractSqlQueryResult:
         If the query fails, returns the error, if any provided by Druid.
         """
         return self._error
+
+    def error_msg(self):
+        err = self.error()
+        if err is None:
+            return "unknown"
+        msg = err.get("error")
+        text = err.get("errorMessage")
+        if msg is None and text is None:
+            return "unknown"
+        if msg is None:
+            return text
+        if text is None:
+            return msg
+        return msg + ": " + text
 
     def id(self):
         """
@@ -286,13 +300,13 @@ class SqlQueryResult(AbstractSqlQueryResult):
     def error(self):
         if self.ok():
             return None
-        try:
-            json = self.json()
-            if json is None:
-                return "unknown"
-            return json['error']
-        except KeyError:
+        if self._error is not None:
+            return self._error
+        if self.http_response is None:
+            return { "error": "unknown"}
+        if self.is_response_ok():
             return None
+        return {"error": "HTTP {}".format(self.http_response.status_code)}
 
     def id(self):
         if self.http_response is None:
@@ -313,7 +327,7 @@ class SqlQueryResult(AbstractSqlQueryResult):
         if self._rows is None:
             json = self.json()
             if json is None:
-                return self.response.text
+                return self.http_response.text
             self._rows = parse_rows(self.format(), self.request.context, json)
         return self._rows
 
