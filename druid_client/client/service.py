@@ -147,17 +147,17 @@ class Service:
             check_error(r)
         return r
 
-    def post_json(self, req, body, args=None, headers=None):
+    def post_json(self, req, body, args=None, headers=None, params=None):
         """
         Issues a POST request for the given URL on this
         node, with the given payload and optional URL query 
         parameters. The payload is serialized to JSON.
         """
-        r = self.post_only_json(req, body, args, headers)
+        r = self.post_only_json(req, body, args, headers, params)
         check_error(r)
         return r.json()
 
-    def post_only_json(self, req, body, args=None, headers=None) -> requests.Request:
+    def post_only_json(self, req, body, args=None, headers=None, params=None) -> requests.Request:
         """
         Issues a POST request for the given URL on this
         node, with the given payload and optional URL query 
@@ -169,14 +169,17 @@ class Service:
         if self.cluster_config.trace:
             print("POST:", url)
             print("body:", body)
-        return self.session.post(url, json=body, headers=headers)
+        return self.session.post(url, json=body, headers=headers, params=params)
 
-    def delete_json(self, req, args=None, headers=None):
+    def delete(self, req, args=None, params=None, headers=None):
         url = self.build_url(req, args)
         if self.cluster_config.trace:
             print("DELETE:", url)
-        r = self.session.delete(url, headers=headers)
-        return r.json()
+        r = self.session.delete(url, params=params, headers=headers)
+        return r
+
+    def delete_json(self, req, args=None, params=None, headers=None):
+        return self.delete(req, args=args, params=params, headers=headers).json()
 
     #-------- Common --------
 

@@ -197,6 +197,8 @@ class AbstractSqlQueryResult:
         err = self.error()
         if err is None:
             return "unknown"
+        if type(err) is str:
+            return err
         msg = err.get("error")
         text = err.get("errorMessage")
         if msg is None and text is None:

@@ -70,6 +70,17 @@ REQ_LU_ALL_LOOKUPS = REQ_LU_CONFIG + '/all'
 REQ_LU_TIER_CONFIG = LOOKUP_BASE + '/{}'
 REQ_LU_LOOKUP_CONFIG = REQ_LU_TIER_CONFIG + '/{}'
 
+# Catalog (new feature in 0.24)
+CATALOG_BASE = COORD_BASE + "/catalog"
+REQ_CAT_SCHEMAS = CATALOG_BASE + "/schemas"
+REQ_CAT_SCHEMA = REQ_CAT_SCHEMAS + "/{}"
+REQ_CAT_SCHEMA_TABLE_NAMES = REQ_CAT_SCHEMA + "/names"
+REQ_CAT_SCHEMA_TABLES = REQ_CAT_SCHEMA + "/tables"
+REQ_CAT_TABLES = CATALOG_BASE + "/tables"
+REQ_CAT_TABLE = REQ_CAT_TABLES + "/{}/{}"
+REQ_CAT_LIST = CATALOG_BASE + "/list"
+REQ_CAT_LIST_SCHEMA_NAMES = REQ_CAT_LIST + "/schemas/names"
+REQ_CAT_LIST_TABLE_NAMES = REQ_CAT_LIST + "/tables/names"
 
 class Coordinator(Service):
     """
@@ -840,4 +851,30 @@ class Coordinator(Service):
         Currently undocumented.
         """
         return self.get_json(REQ_CLUSTER, params={"full": ""})
+
+    #-------- Catalog --------
+
+    def create_catalog_table(self, table_metadata, ifNotExists=False):
+        return self.post_json(REQ_CAT_TABLES, table_metadata, params={'ifNew': ifNotExists})
+
+    def catalog_table(self, schema, table_name):
+        return self.get_json(REQ_CAT_TABLE, args=[schema, table_name])
+
+    def update_catalog_table_spec(self, schema, table_name, spec, version=0):
+        return self.post_json(REQ_CAT_TABLE, spec, args=[schema, table_name], params={'version': version})
+
+    def drop_catalog_table(self, schema, table_name, ifExists=False):
+        return self.delete(REQ_CAT_TABLE, args=[schema, table_name], params={'ifExists': ifExists})
+
+    def catalog_schema_names(self):
+        return self.get_json(REQ_CAT_LIST_SCHEMA_NAMES)
+
+    def catalog_table_names_in_schema(self, schema):
+        return self.get_json(REQ_CAT_SCHEMA_TABLE_NAMES, args=[schema])
+
+    def catalog_table_details_in_schema(self, schema):
+        return self.get_json(REQ_CAT_SCHEMA_TABLES, args=[schema])
+
+    def catalog_table_names(self):
+        return self.get_json(REQ_CAT_LIST_TABLE_NAMES)
 

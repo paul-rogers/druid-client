@@ -23,6 +23,7 @@ from .broker import Broker
 from .metadata import ClusterMetadata
 from .table import TableMetadata
 from .task import Task
+from .catalog import Catalog
 
 service_map = {
     consts.COORDINATOR: Coordinator,
@@ -289,3 +290,6 @@ class Cluster:
         if type(spec) is str:
             spec = json.loads(spec)
         return Task(self, self.overlord().submit_task(spec), spec=spec)
+
+    def catalog(self):
+        return Catalog(self.coordinator())

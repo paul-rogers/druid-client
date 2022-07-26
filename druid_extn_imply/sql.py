@@ -19,54 +19,51 @@ from druid_client.client.sql import SqlRequest, ColumnSchema, AbstractSqlQueryRe
 import druid_client.client.consts as druid_consts
 from . import consts
 
-def async_type(context):
-    if context is None:
-        return consts.ASYNC_BROKER_ENGINE
-    value = context.get(consts.TALARIA_KEY, None)
-    if value is None:
-        return consts.ASYNC_BROKER_ENGINE
-    if value is True:
-        return consts.ASYNC_TALARIA_INDEXER_ENGINE
-    if value == consts.TALARIA_INDEXER or value == consts.TALARIA_SERVER:
-        return consts.ASYNC_TALARIA_SERVER_ENGINE
-    return consts.ASYNC_BROKER_ENGINE
-
-def is_talaria(context):
-    engine = async_type(context)
-    return engine == consts.ASYNC_TALARIA_INDEXER_ENGINE or engine == consts.ASYNC_TALARIA_SERVER_ENGINE
-
 class ImplySqlRequest(SqlRequest):
 
     def __init__(self, client, sql):
         SqlRequest.__init__(self, client.client, sql)
         self.imply_client = client
-        self.async_mode = None
+        self.engine = consts.BROKER_ENGINE
 
-    def with_async(self, query_mode=consts.ASYNC_QUERY):
-        self.async_mode = query_mode
-        if query_mode == consts.TALARIA_INDEXER:
-            self.with_context({consts.TALARIA_KEY: True})
-        elif query_mode == consts.TALARIA_SERVER:
-            self.with_context({consts.TALARIA_KEY: query_mode})
+    def as_async(self):
+        self.engine = consts.ASYNC_BROKER_ENGINE
+        return self
+    
+    def as_task(self):
+        self.engine = consts.TASK_ENGINE
         return self
 
     def is_async(self):
-        return self.async_mode is not None
+        return self.engine == consts.ASYNC_BROKER_ENGINE
 
-    def async_type(self):
-        return async_type(self.context)
+    def is_task(self):
+        return self.engine == consts.TASK_ENGINE
+
+    def set_defaults(self):
+        if self.engine == consts.TASK_ENGINE:
+            if self.context is None:
+                self.context = {}
+            if self.context.get(consts.MSQE_TASKS_KEY) is None:
+                self.context[consts.MSQE_TASKS_KEY] = 2
 
     def format(self):
-        if is_talaria(self.context):
+        if self.engine == consts.TASK_ENGINE:
             return base_consts.SQL_ARRAY
         else:
             return SqlRequest.format(self)
 
     def run(self):
-        if self.is_async():
+        if self.engine == consts.ASYNC_BROKER_ENGINE:
             return self.imply_client.async_sql(self)
+        elif self.engine == consts.TASK_ENGINE:
+            return self.imply_client.sql_task(self)
         else:
             return self.imply_client.sql_query(self)
+
+    def to_request(self):
+        #self.set_defaults()
+        return super().to_request()
     
 class AbstractAsyncQueryResult(AbstractSqlQueryResult):
 
@@ -99,7 +96,7 @@ class AbstractAsyncQueryResult(AbstractSqlQueryResult):
         """
         raise NotImplementedError
 
-    def finishd(self):
+    def finished(self):
         """
         Reports if the query is succeeded.
         """
@@ -223,6 +220,9 @@ class SqlTaskResult(AbstractAsyncQueryResult):
 
     def __init__(self, request, response):
         AbstractAsyncQueryResult.__init__(self, request, response)
+        self._reports = None
+        self._schema = None
+        self._results = None
 
         # Typical response:
         # {'taskId': '6f7b514a446d4edc9d26a24d4bd03ade_fd8e242b-7d93-431d-b65b-2a512116924c_bjdlojgj',
@@ -276,31 +276,32 @@ class SqlTaskResult(AbstractAsyncQueryResult):
             self._error = self._status['status']['errorMsg']
         return self._status
         
-    def results(self):
+    def reports(self) -> dict:
         self.check_valid()
-        if self._results is None:
-            self.wait_done()
-            self._results = self.imply_client.sql_task_results(self._id)
-        return self._results
-
-    def details(self):
-        self.check_valid()
-        if self._details is None:
+        if self._reports is None:
             self.join()
-            self._details = self.imply_client.sql_task_details(self._id)
-        return self._details
+            self._reports = self.overlord().task_reports(self._id)
+        return self._reports
+
+    def results(self):
+        if self._results is None:
+            rpts = self.reports()
+            self._results = rpts['multiStageQuery']['payload']['results']
+        return self._results
 
     def schema(self):
         if self._schema is None:
             results = self.results()
-            size = len(results[0])
+            sig = results['signature']
+            sqlTypes = results['sqlTypeNames']
+            size = len(sig)
             self._schema = []
             for i in range(size):
-                self._schema.append(ColumnSchema(results[0][i], results[2][i], results[1][i]))
+                self._schema.append(ColumnSchema(sig[i]['name'], sqlTypes[i], sig[i]['type']))
         return self._schema
 
     def rows(self):
         if self._rows is None:
             results = self.results()
-            self._rows = results[3:]
+            self._rows = results['results']
         return self._rows

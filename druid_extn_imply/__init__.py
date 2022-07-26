@@ -13,9 +13,7 @@
 # limitations under the License.
 
 from .client import ImplyClient
-from .talaria import Talaria
-from . import consts
 
 def register_client(context):
     context.client = ImplyClient
-    context.roles = {consts.TALARIA_SERVICE: Talaria}
+    #context.roles = {consts.TALARIA_SERVICE: Talaria}

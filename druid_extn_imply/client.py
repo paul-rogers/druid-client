@@ -15,9 +15,7 @@
 from druid_client.client.client import REQ_ROUTER_SQL
 from druid_client.client.error import ClientError
 from druid_client.client.util import is_blank
-from .talaria_query import TalariaQueryResult
-from .sql import ImplySqlRequest, AsyncQueryResult, is_talaria, SqlTaskResult
-from . import consts
+from .sql import ImplySqlRequest, AsyncQueryResult, SqlTaskResult
 
 REQ_ROUTER_ASYNC_SQL = REQ_ROUTER_SQL + "/async"
 ASYNC_QUERY_BASE = REQ_ROUTER_ASYNC_SQL + '/{}'
@@ -26,10 +24,6 @@ REQ_ROUTER_ASYNC_STATUS = ASYNC_QUERY_BASE + "/status"
 REQ_ROUTER_ASYNC_RESULTS = ASYNC_QUERY_BASE + "/results"
 
 REQ_ROUTER_SQL_TASK = REQ_ROUTER_SQL + "/task"
-SQL_TASK_BASE = REQ_ROUTER_SQL_TASK + '/{}'
-REQ_ROUTER_SQL_TASK_DETAILS = SQL_TASK_BASE
-REQ_ROUTER_SQL_TASK_STATUS = SQL_TASK_BASE + "/status"
-REQ_ROUTER_SQL_TASK_RESULTS = SQL_TASK_BASE + "/results"
 
 class ImplyClient:
 
@@ -49,11 +43,17 @@ class ImplyClient:
     def sql_request(self, sql):
         return ImplySqlRequest(self, sql)
 
-    def async_sql(self, request):
+    def sql_async(self, request):
         response = self.client.post_only_json(REQ_ROUTER_ASYNC_SQL, 
                     request.to_request(), 
                     headers=request.headers)
         return AsyncQueryResult(request, response)
+
+    def sql_task_request(self, sql):
+        return ImplySqlRequest(self, sql).as_task()
+    
+    def sql_async_request(self, sql):
+        return ImplySqlRequest(self, sql).as_async()
 
     def async_status(self, id, timeout_sec=10):
         return self.client.get_json(REQ_ROUTER_ASYNC_STATUS, args=[id],
@@ -69,28 +69,13 @@ class ImplyClient:
         if request is None:
             raise ClientError("No query provided.")
         if type(request) == str:
-            request = self.sql_request(request)
+            request = self.sql_task_request(request)
         if is_blank(request.sql):
             raise ClientError("No query provided.")
         if self.client.cluster_config.trace:
             print(request.sql)
-        #request.with_async(consts.TALARIA_INDEXER)
-        response = self.client.post_only_json(REQ_ROUTER_SQL_TASK, 
+        response = self.client.post_only_json(
+                    REQ_ROUTER_SQL_TASK, 
                     request.to_request(), 
                     headers=request.headers)
         return SqlTaskResult(request, response)
-
-    def sql_task_details(self, id):
-        return self.client.get_json(REQ_ROUTER_SQL_TASK_DETAILS, args=[id])
-
-    def sql_task_results(self, id):
-        return self.client.get_json(REQ_ROUTER_SQL_TASK_RESULTS, args=[id])
-
-    def native_talaria(self, request):
-        if request is None:
-            raise ClientError("No query provided.")
-        if type(request) == str:
-            request = self.client.sql_request(request)
-        request.with_context({consts.TALARIA_KEY: consts.TALARIA_SERVER})
-        resp = self.client.sql_query(request)
-        return TalariaQueryResult(request, resp.http_response)
